@@ -6,6 +6,7 @@ import 'media_detail_page.dart';
 import 'media_listpage.dart';
 import 'models/media_model.dart';
 import 'ui_effects.dart';
+import 'about_application_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -165,7 +166,18 @@ class ProfilePage extends StatelessWidget {
 
           const Spacer(),
 
-          _headerButton(text: 'About Me', onPressed: () {}),
+          _headerButton(
+            text: 'About Applications',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AboutApplicationPage(),
+                ),
+              );
+            },
+          ),
+          
           _headerButton(text: 'Settings', onPressed: () {}),
           _headerButton(
             text: 'Logout',
