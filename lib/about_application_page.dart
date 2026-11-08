@@ -6,7 +6,7 @@ class AboutApplicationPage extends StatelessWidget {
   final List<Map<String, String>> members = const [
     {'nama': 'Maksima Insan A', 'nim': '25051204438'},
     {'nama': 'najwan', 'nim': '4231'},
-    {'nama': 'gea', 'nim': '42'},
+    {'nama': 'Geacealsia Shello A', 'nim': '25051204421'},
     {'nama': 'saha', 'nim': '21'},
     {'nama': 'tri', 'nim': '12'},
   ];
