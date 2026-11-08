@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
+import 'app_colors.dart';
 import 'media_data.dart';
 import 'media_detail_page.dart';
 import 'media_listpage.dart';
@@ -16,11 +20,15 @@ class _HomeSection {
 
   final int total;
 
+  /// true = kartu dibuat lebih besar + ada badge tipe (dipakai untuk rekomendasi).
+  final bool featured;
+
   _HomeSection({
     required this.title,
     required this.items,
     this.listType,
     this.total = 0,
+    this.featured = false,
   });
 }
 
@@ -33,16 +41,16 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   // ============================================================
-  // COLORS
+  // COLORS (diambil dari AppColors)
   // ============================================================
 
-  static const Color backgroundColor = Color(0xFF0B0B0C);
-  static const Color headerColor = Color(0xFF151516);
-  static const Color cardColor = Color(0xFF1B1B1D);
-  static const Color borderColor = Color(0xFF2A2A2D);
+  static const Color backgroundColor = AppColors.background;
+  static const Color headerColor = AppColors.panel;
+  static const Color cardColor = AppColors.card;
+  static const Color borderColor = AppColors.border;
 
-  static const Color lightBlue = Color(0xFF9DBEFF);
-  static const Color mutedText = Color(0xFF8E8E93);
+  static const Color lightBlue = AppColors.lightBlue;
+  static const Color mutedText = AppColors.mutedText;
 
   // ============================================================
   // PENGATURAN
@@ -52,6 +60,9 @@ class _HomePageState extends State<HomePage> {
 
   static const int _popularLimit = 15;
   static const int _newestLimit = 12;
+
+  static const int _heroCount = 5;
+  static const Duration _heroInterval = Duration(seconds: 6);
 
   // ============================================================
   // STATE
@@ -63,17 +74,31 @@ class _HomePageState extends State<HomePage> {
   late final List<String> _navTitles;
   String _activeSection = '';
 
+  // Seberapa pekat header (0 = hampir transparan di atas hero, 1 = solid).
+  final ValueNotifier<double> _headerOpacity = ValueNotifier<double>(0);
+
+  // Hero
+  late final List<MediaModel> _heroItems;
+  final PageController _heroController = PageController();
+  Timer? _heroTimer;
+  int _heroIndex = 0;
+
   @override
   void initState() {
     super.initState();
     _navTitles = _buildSections().map((s) => s.title).toList();
-    _scrollController.addListener(_updateActiveSection);
+    _heroItems = _buildHeroItems();
+    _scrollController.addListener(_onScroll);
+    _startHeroTimer();
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_updateActiveSection);
+    _heroTimer?.cancel();
+    _heroController.dispose();
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _headerOpacity.dispose();
     super.dispose();
   }
 
@@ -85,6 +110,7 @@ class _HomePageState extends State<HomePage> {
     return [
       _HomeSection(
         title: 'Rekomendasi Untukmu',
+        featured: true,
         items: [
           ...movieData.take(2),
           ...seriesData.take(2),
@@ -144,11 +170,75 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ============================================================
-  // NAVBAR: SCROLL KE SECTION + PENANDA SECTION AKTIF
+  // HERO: DAFTAR ITEM + AUTO SLIDE
+  // ============================================================
+
+  /// Pilihan hero: gabungan yang terbaru dan yang teratas dari tiap kategori,
+  /// tanpa judul ganda, hanya yang punya poster.
+  List<MediaModel> _buildHeroItems() {
+    final candidates = <MediaModel>[
+      if (movieData.isNotEmpty) sortedByNewest(movieData).first,
+      if (seriesData.isNotEmpty) sortedByNewest(seriesData).first,
+      if (animeData.isNotEmpty) sortedByNewest(animeData).first,
+      if (movieData.isNotEmpty) movieData.first,
+      if (seriesData.isNotEmpty) seriesData.first,
+      if (animeData.isNotEmpty) animeData.first,
+      if (movieData.length > 1) movieData[1],
+      if (seriesData.length > 1) seriesData[1],
+    ];
+
+    final seen = <String>{};
+    final result = <MediaModel>[];
+
+    for (final item in candidates) {
+      if (item.imageUrl.isEmpty) continue;
+      if (!seen.add(item.title.toLowerCase())) continue;
+      result.add(item);
+      if (result.length >= _heroCount) break;
+    }
+
+    return result;
+  }
+
+  void _startHeroTimer() {
+    _heroTimer?.cancel();
+    if (_heroItems.length < 2) return;
+
+    _heroTimer = Timer.periodic(_heroInterval, (_) {
+      if (!mounted || !_heroController.hasClients) return;
+      _goToHero((_heroIndex + 1) % _heroItems.length, restartTimer: false);
+    });
+  }
+
+  void _goToHero(int index, {bool restartTimer = true}) {
+    if (!_heroController.hasClients) return;
+
+    _heroController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 550),
+      curve: Curves.easeInOutCubic,
+    );
+
+    if (restartTimer) _startHeroTimer();
+  }
+
+  // ============================================================
+  // SCROLL: HEADER + SECTION AKTIF
   // ============================================================
 
   double _headerTotal() {
     return MediaQuery.of(context).padding.top + _headerHeight;
+  }
+
+  void _onScroll() {
+    if (!mounted) return;
+
+    // Header makin solid setelah di-scroll sedikit.
+    if (_scrollController.hasClients) {
+      _headerOpacity.value = (_scrollController.offset / 140).clamp(0.0, 1.0);
+    }
+
+    _updateActiveSection();
   }
 
   void _scrollToSection(String title) {
@@ -184,8 +274,6 @@ class _HomePageState extends State<HomePage> {
 
   /// Section yang judulnya sudah lewat di bawah header dianggap aktif.
   void _updateActiveSection() {
-    if (!mounted) return;
-
     final line = _headerTotal() + 40;
     String current = '';
 
@@ -213,6 +301,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _openDetail(MediaModel item) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => MediaDetailPage(media: item)),
+    );
+  }
+
   // ============================================================
   // BUILD
   // ============================================================
@@ -230,25 +325,35 @@ class _HomePageState extends State<HomePage> {
           // ======================================================
           SingleChildScrollView(
             controller: _scrollController,
-            padding: EdgeInsets.only(top: _headerTotal() + 24, bottom: 40),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1400),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final section in sections) ...[
-                      KeyedSubtree(
-                        key: _keyFor(section.title),
-                        child: _buildSectionTitle(section),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildHorizontalList(section),
-                      const SizedBox(height: 28),
-                    ],
-                  ],
+            padding: const EdgeInsets.only(bottom: 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Hero memanjang penuh dan berada di belakang header.
+                if (_heroItems.isNotEmpty) _buildHero(),
+
+                const SizedBox(height: 26),
+
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1400),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final section in sections) ...[
+                          KeyedSubtree(
+                            key: _keyFor(section.title),
+                            child: _buildSectionTitle(section),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildHorizontalList(section),
+                          const SizedBox(height: 28),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
 
@@ -262,82 +367,371 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ============================================================
+  // HERO
+  // ============================================================
+
+  Widget _buildHero() {
+    final wide = MediaQuery.of(context).size.width >= 720;
+    final contentHeight = wide ? 360.0 : 320.0;
+    final totalHeight = _headerTotal() + contentHeight;
+
+    return SizedBox(
+      height: totalHeight,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: _heroController,
+            itemCount: _heroItems.length,
+            onPageChanged: (i) => setState(() => _heroIndex = i),
+            itemBuilder: (context, index) =>
+                _buildHeroSlide(_heroItems[index], wide),
+          ),
+
+          // Tombol panah (hanya di layar lebar)
+          if (wide && _heroItems.length > 1) ...[
+            Positioned(
+              left: 14,
+              top: _headerTotal() + (contentHeight - 44) / 2,
+              child: _HeroArrow(
+                icon: Icons.chevron_left_rounded,
+                onTap: () => _goToHero(
+                  (_heroIndex - 1 + _heroItems.length) % _heroItems.length,
+                ),
+              ),
+            ),
+            Positioned(
+              right: 14,
+              top: _headerTotal() + (contentHeight - 44) / 2,
+              child: _HeroArrow(
+                icon: Icons.chevron_right_rounded,
+                onTap: () => _goToHero((_heroIndex + 1) % _heroItems.length),
+              ),
+            ),
+          ],
+
+          // Indikator titik
+          if (_heroItems.length > 1)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 14,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (int i = 0; i < _heroItems.length; i++)
+                    GestureDetector(
+                      onTap: () => _goToHero(i),
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 6,
+                          ),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeOut,
+                            width: i == _heroIndex ? 22 : 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: i == _heroIndex
+                                  ? lightBlue
+                                  : const Color(0x55FFFFFF),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroSlide(MediaModel item, bool wide) {
+    final posterW = wide ? 190.0 : 108.0;
+    final posterH = wide ? 285.0 : 162.0;
+
+    final meta = [
+      if (item.releaseYear != null) item.releaseYear.toString(),
+      if (item.rating != null) item.formattedRating,
+    ].join('  /  ');
+
+    final overview = _cleanOverview(item.overview);
+    final type = item.genre ?? '';
+
+    final poster = HoverLift(
+      hoverScale: 1.02,
+      radius: 6,
+      onTap: () => _openDetail(item),
+      child: Container(
+        width: posterW,
+        height: posterH,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0x33FFFFFF)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x99000000),
+              blurRadius: 28,
+              offset: Offset(0, 14),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: PosterImage(media: item, width: posterW, height: posterH),
+      ),
+    );
+
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (type.isNotEmpty) _TypeChip(label: type),
+        if (type.isNotEmpty) SizedBox(height: wide ? 14 : 10),
+        Text(
+          item.title,
+          maxLines: wide ? 2 : 3,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: wide ? 38 : 22,
+            fontWeight: FontWeight.w800,
+            height: 1.1,
+          ),
+        ),
+        if (meta.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            meta,
+            style: const TextStyle(
+              color: AppColors.softText,
+              fontSize: 14,
+            ),
+          ),
+        ],
+        if (wide && overview.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Text(
+              overview,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.softText,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
+        SizedBox(height: wide ? 20 : 14),
+        Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          children: [
+            _HeroButton(
+              label: 'Lihat detail',
+              filled: true,
+              onTap: () => _openDetail(item),
+            ),
+            if (type.isNotEmpty)
+              _HeroButton(
+                label: 'Semua $type',
+                filled: false,
+                onTap: () => _openList(type),
+              ),
+          ],
+        ),
+      ],
+    );
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Latar: poster yang diburamkan
+        ClipRect(
+          child: Transform.scale(
+            scale: 1.2,
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+              child: PosterImage(
+                media: item,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+            ),
+          ),
+        ),
+
+        // Gelapkan dari kiri (supaya teks terbaca)
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Color(0xEE0B0B0C), Color(0x990B0B0C)],
+            ),
+          ),
+        ),
+
+        // Menyatu ke warna latar halaman di bagian bawah
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.center,
+              end: Alignment.bottomCenter,
+              colors: [Color(0x000B0B0C), backgroundColor],
+            ),
+          ),
+        ),
+
+        // Isi
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            wide ? 64 : 18,
+            _headerTotal() + (wide ? 24 : 14),
+            wide ? 64 : 18,
+            wide ? 36 : 34,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1300),
+              child: wide
+                  ? Row(
+                      children: [
+                        Expanded(child: text),
+                        const SizedBox(width: 40),
+                        poster,
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        poster,
+                        const SizedBox(width: 16),
+                        Expanded(child: text),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Membersihkan tag HTML sederhana (deskripsi dari API kadang berisi <br>).
+  String _cleanOverview(String? raw) {
+    if (raw == null) return '';
+    return raw
+        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), ' ')
+        .replaceAll(RegExp(r'<[^>]+>'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  // ============================================================
   // HEADER / NAVBAR
   // ============================================================
 
   Widget _buildHeader() {
     final wide = MediaQuery.of(context).size.width >= 720;
 
-    return Material(
-      color: headerColor,
-      child: Container(
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: borderColor)),
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: SizedBox(
-            height: _headerHeight,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  // LOGO (klik = kembali ke atas)
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      onTap: _scrollToTop,
+    return ValueListenableBuilder<double>(
+      valueListenable: _headerOpacity,
+      builder: (context, t, _) {
+        // Transparan di atas hero, makin solid saat di-scroll.
+        final bgAlpha = 0.35 + 0.57 * t;
+        final borderAlpha = t;
+
+        return ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: Material(
+              color: headerColor.withAlpha((bgAlpha * 255).round()),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: borderColor.withAlpha((borderAlpha * 255).round()),
+                    ),
+                  ),
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: SizedBox(
+                    height: _headerHeight,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(5),
-                            child: Image.asset(
-                              'assets/pnp.jpg',
-                              width: 38,
-                              height: 38,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          if (wide) ...[
-                            const SizedBox(width: 10),
-                            const Text(
-                              'MYDVA',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 21,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1,
+                          // LOGO (klik = kembali ke atas)
+                          MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: _scrollToTop,
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(5),
+                                    child: Image.asset(
+                                      'assets/pnp.jpg',
+                                      width: 38,
+                                      height: 38,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  if (wide) ...[
+                                    const SizedBox(width: 10),
+                                    const Text(
+                                      'MYDVA',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 21,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                          ],
+                          ),
+
+                          const SizedBox(width: 16),
+
+                          // LINK KE SECTION
+                          Expanded(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  for (final title in _navTitles)
+                                    _buildNavItem(title),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(width: 12),
+
+                          _buildProfileButton(),
                         ],
                       ),
                     ),
                   ),
-
-                  const SizedBox(width: 16),
-
-                  // LINK KE SECTION
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (final title in _navTitles) _buildNavItem(title),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  _buildProfileButton(),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -364,7 +758,7 @@ class _HomePageState extends State<HomePage> {
         child: AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 220),
           style: TextStyle(
-            color: active ? Colors.white : mutedText,
+            color: active ? Colors.white : AppColors.softText,
             fontSize: 14,
             fontWeight: active ? FontWeight.w700 : FontWeight.w500,
           ),
@@ -412,6 +806,15 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Row(
         children: [
+          Container(
+            width: 4,
+            height: 20,
+            decoration: BoxDecoration(
+              color: lightBlue,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
           Text(
             section.title,
             style: const TextStyle(
@@ -446,7 +849,7 @@ class _HomePageState extends State<HomePage> {
     final hasSeeAll = section.listType != null;
 
     return SizedBox(
-      height: 262,
+      height: section.featured ? 340 : 262,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
@@ -456,7 +859,7 @@ class _HomePageState extends State<HomePage> {
             return _buildSeeAllCard(section);
           }
 
-          return _buildMediaCard(items[index]);
+          return _buildMediaCard(items[index], featured: section.featured);
         },
       ),
     );
@@ -500,21 +903,19 @@ class _HomePageState extends State<HomePage> {
   // MEDIA CARD
   // ============================================================
 
-  Widget _buildMediaCard(MediaModel item) {
+  Widget _buildMediaCard(MediaModel item, {bool featured = false}) {
     final subtitle = [
       if (item.genre != null) item.genre!,
       if (item.releaseYear != null) item.releaseYear.toString(),
     ].join('  /  ');
 
+    final cardWidth = featured ? 190.0 : 145.0;
+    final posterHeight = featured ? 255.0 : 180.0;
+
     return HoverLift(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => MediaDetailPage(media: item)),
-        );
-      },
+      onTap: () => _openDetail(item),
       child: Container(
-        width: 145,
+        width: cardWidth,
         margin: const EdgeInsets.only(right: 14),
         decoration: BoxDecoration(
           color: cardColor,
@@ -527,8 +928,22 @@ class _HomePageState extends State<HomePage> {
           children: [
             SizedBox(
               width: double.infinity,
-              height: 180,
-              child: PosterImage(media: item),
+              height: posterHeight,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  PosterImage(media: item),
+
+                  // Badge tipe (hanya untuk kartu rekomendasi, karena
+                  // isinya campuran film / series / anime)
+                  if (featured && item.genre != null)
+                    Positioned(
+                      left: 8,
+                      top: 8,
+                      child: _TypeChip(label: item.genre!, small: true),
+                    ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(9, 8, 9, 3),
@@ -536,9 +951,9 @@ class _HomePageState extends State<HomePage> {
                 item.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
-                  fontSize: 13,
+                  fontSize: featured ? 14 : 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -554,6 +969,112 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==============================================================
+// KOMPONEN KECIL
+// ==============================================================
+
+/// Label tipe (Film / Series / Anime).
+class _TypeChip extends StatelessWidget {
+  final String label;
+  final bool small;
+
+  const _TypeChip({required this.label, this.small = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: small ? 8 : 12,
+        vertical: small ? 3 : 5,
+      ),
+      decoration: BoxDecoration(
+        color: small ? const Color(0xCC0B0B0C) : const Color(0x334A6FC3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: small ? const Color(0x33FFFFFF) : AppColors.lightBlue,
+                  ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: small ? Colors.white : AppColors.lightBlue,
+          fontSize: small ? 10.5 : 12.5,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// Tombol di hero. [filled] = tombol utama, selain itu tombol garis tepi.
+class _HeroButton extends StatelessWidget {
+  final String label;
+  final bool filled;
+  final VoidCallback onTap;
+
+  const _HeroButton({
+    required this.label,
+    required this.filled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          decoration: BoxDecoration(
+            color: filled ? AppColors.lightBlue : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: filled ? AppColors.lightBlue : const Color(0x66FFFFFF),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: filled ? const Color(0xFF0B0B0C) : Colors.white,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Panah kiri/kanan di hero.
+class _HeroArrow extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _HeroArrow({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: const Color(0x660B0B0C),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0x33FFFFFF)),
+          ),
+          child: Icon(icon, color: Colors.white, size: 28),
         ),
       ),
     );
