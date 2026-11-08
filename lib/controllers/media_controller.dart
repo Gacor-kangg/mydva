@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/media_model.dart';
 import '../repositories/media_repository.dart';
 import '../services/api_exception.dart';
+import 'dart:async';
 
 class MediaController extends ChangeNotifier {
   final MediaRepository _repository;
@@ -10,7 +11,14 @@ class MediaController extends ChangeNotifier {
   MediaController({required MediaRepository repository})
     : _repository = repository;
 
-  // State data
+  static const List<String> mediaTypes = [
+    'Film',
+    'Series',
+    'Anime',
+    'J-Drama',
+    'K-Drama',
+  ];
+
   List<MediaModel> _mediaList = [];
 
   bool _isLoading = false;
@@ -20,10 +28,9 @@ class MediaController extends ChangeNotifier {
   String _searchQuery = '';
   String _selectedSort = 'Popular';
 
-  // Mencegah respons request lama menimpa request terbaru.
   int _requestId = 0;
+  Timer? _searchDebounce;
 
-  // Getter
   List<MediaModel> get mediaList => List.unmodifiable(_mediaList);
 
   bool get isLoading => _isLoading;
@@ -38,10 +45,11 @@ class MediaController extends ChangeNotifier {
 
   bool get hasError => _errorMessage != null;
 
-  // Data yang sudah melalui pencarian dan sorting.
   List<MediaModel> get filteredMedia {
+    final query = _searchQuery.toLowerCase();
+
     final result = _mediaList.where((media) {
-      return media.title.toLowerCase().contains(_searchQuery.toLowerCase());
+      return media.title.toLowerCase().contains(query);
     }).toList();
 
     switch (_selectedSort) {
@@ -65,17 +73,18 @@ class MediaController extends ChangeNotifier {
 
       case 'Popular':
       default:
-        // Urutan asli dari API dipertahankan.
+        result.sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
         break;
     }
 
     return result;
   }
 
-  // Mengambil data berdasarkan jenis media.
   Future<void> loadMedia(String type) async {
-    if (!['Film', 'Series', 'Anime'].contains(type)) {
+    _searchDebounce?.cancel();
+    if (!mediaTypes.contains(type)) {
       _errorMessage = 'Jenis media tidak dikenal.';
+      _mediaList = [];
       notifyListeners();
       return;
     }
@@ -106,11 +115,18 @@ class MediaController extends ChangeNotifier {
           result = await _repository.getAnime();
           break;
 
+        case 'J-Drama':
+          result = await _repository.getJDrama();
+          break;
+
+        case 'K-Drama':
+          result = await _repository.getKDrama();
+          break;
+
         default:
           result = [];
       }
 
-      // Abaikan hasil request yang sudah tidak relevan.
       if (currentRequest != _requestId) return;
 
       _mediaList = result;
@@ -133,25 +149,92 @@ class MediaController extends ChangeNotifier {
     }
   }
 
-  // Mengubah pencarian.
+  
   void setSearchQuery(String query) {
     _searchQuery = query.trim();
     notifyListeners();
+
+    _searchDebounce?.cancel();
+
+    if (_searchQuery.isEmpty) {
+      loadMedia(_selectedType);
+      return;
+    }
+
+    // Film dan Series sementara tetap difilter dari data yang sudah dimuat.
+    if (_selectedType == 'Film' || _selectedType == 'Series') {
+      return;
+    }
+
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 500),
+      () => _searchMediaFromApi(_searchQuery),
+    );
   }
 
-  // Mengubah metode sorting.
+  Future<void> _searchMediaFromApi(String keyword) async {
+    final currentRequest = ++_requestId;
+
+    _isLoading = true;
+    _errorMessage = null;
+    _mediaList = [];
+
+    notifyListeners();
+
+    try {
+      late final List<MediaModel> result;
+
+      switch (_selectedType) {
+        case 'Anime':
+          result = await _repository.searchAnime(keyword);
+          break;
+
+        case 'J-Drama':
+          result = await _repository.searchJDrama(keyword);
+          break;
+
+        case 'K-Drama':
+          result = await _repository.searchKDrama(keyword);
+          break;
+
+        default:
+          result = [];
+      }
+
+      if (currentRequest != _requestId) return;
+
+      _mediaList = result;
+    } on ApiException catch (error) {
+      if (currentRequest != _requestId) return;
+
+      _mediaList = [];
+      _errorMessage = error.message;
+    } catch (error) {
+      if (currentRequest != _requestId) return;
+
+      _mediaList = [];
+      _errorMessage = 'Terjadi kesalahan saat mencari: $error';
+    } finally {
+      if (currentRequest == _requestId) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+
   void setSort(String sort) {
     _selectedSort = sort;
     notifyListeners();
   }
 
-  // Memuat ulang data saat tombol refresh digunakan.
   Future<void> refresh() {
     return loadMedia(_selectedType);
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _requestId++;
     super.dispose();
   }

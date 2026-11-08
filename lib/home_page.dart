@@ -10,6 +10,7 @@ import 'media_listpage.dart';
 import 'models/media_model.dart';
 import 'poster_image.dart';
 import 'profile_page.dart';
+import 'services/tmdb_service.dart';
 import 'ui_effects.dart';
 
 class _HomeSection {
@@ -40,6 +41,19 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // ============================================================
+  // DATA DRAMA DARI TMDB
+  // ============================================================
+  // Sebelum data masuk (atau jika gagal / token belum diisi), home
+  // memakai daftar statis dari media_data.dart.
+
+  final TmdbService _tmdb = TmdbService();
+
+  List<MediaModel>? _jdramaPopular;
+  List<MediaModel>? _jdramaNewest;
+  List<MediaModel>? _kdramaPopular;
+  List<MediaModel>? _kdramaNewest;
+
   // ============================================================
   // COLORS (diambil dari AppColors)
   // ============================================================
@@ -90,10 +104,40 @@ class _HomePageState extends State<HomePage> {
     _heroItems = _buildHeroItems();
     _scrollController.addListener(_onScroll);
     _startHeroTimer();
+    _loadDramas();
+  }
+
+  Future<void> _loadDramas() async {
+    Future<List<MediaModel>?> safe(Future<List<MediaModel>> f) async {
+      try {
+        final result = await f;
+        return result.isEmpty ? null : result;
+      } catch (error) {
+        debugPrint('Gagal memuat drama dari TMDB: $error');
+        return null;
+      }
+    }
+
+    final results = await Future.wait([
+      safe(_tmdb.getJDrama()),
+      safe(_tmdb.getJDrama(sortBy: TmdbService.sortNewest)),
+      safe(_tmdb.getKDrama()),
+      safe(_tmdb.getKDrama(sortBy: TmdbService.sortNewest)),
+    ]);
+
+    if (!mounted) return;
+
+    setState(() {
+      _jdramaPopular = results[0];
+      _jdramaNewest = results[1];
+      _kdramaPopular = results[2];
+      _kdramaNewest = results[3];
+    });
   }
 
   @override
   void dispose() {
+    _tmdb.dispose();
     _heroTimer?.cancel();
     _heroController.dispose();
     _scrollController.removeListener(_onScroll);
@@ -158,23 +202,29 @@ class _HomePageState extends State<HomePage> {
         total: animeData.length,
       ),
 
-      // Belum ada halaman "Lihat semua" untuk drama (daftar lengkapnya
-      // masih khusus Film / Series / Anime), jadi listType dikosongkan.
       _HomeSection(
         title: 'J-Drama Terpopuler',
-        items: jdramaData.take(_popularLimit).toList(),
+        items: (_jdramaPopular ?? jdramaData).take(_popularLimit).toList(),
+        listType: 'J-Drama',
       ),
       _HomeSection(
         title: 'J-Drama Terbaru',
-        items: sortedByNewest(jdramaData).take(_newestLimit).toList(),
+        items: (_jdramaNewest ?? sortedByNewest(jdramaData))
+            .take(_newestLimit)
+            .toList(),
+        listType: 'J-Drama',
       ),
       _HomeSection(
         title: 'K-Drama Terpopuler',
-        items: kdramaData.take(_popularLimit).toList(),
+        items: (_kdramaPopular ?? kdramaData).take(_popularLimit).toList(),
+        listType: 'K-Drama',
       ),
       _HomeSection(
         title: 'K-Drama Terbaru',
-        items: sortedByNewest(kdramaData).take(_newestLimit).toList(),
+        items: (_kdramaNewest ?? sortedByNewest(kdramaData))
+            .take(_newestLimit)
+            .toList(),
+        listType: 'K-Drama',
       ),
     ];
   }

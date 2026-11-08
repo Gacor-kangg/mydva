@@ -4,14 +4,19 @@ class MediaModel {
   final String? genre;
   final int? releaseYear;
 
-  // Informasi tambahan dari API
   final String? externalId;
   final String? overview;
+
   final double? rating;
   final int? ratingScale;
   final String? ratingSource;
   final int? voteCount;
+
   final List<String> genres;
+
+  // Identitas kategori dan sumber API
+  final String mediaType;
+  final String source;
 
   MediaModel({
     required this.title,
@@ -25,6 +30,8 @@ class MediaModel {
     this.ratingSource,
     this.voteCount,
     this.genres = const [],
+    this.mediaType = 'Film',
+    this.source = 'TMDB',
   });
 
   String getDisplayTitle() {
@@ -34,7 +41,10 @@ class MediaModel {
     return title;
   }
 
-  // Membentuk model dari respons TMDB.
+  // =========================
+  // TMDB
+  // =========================
+
   factory MediaModel.fromTmdb(
     Map<String, dynamic> json, {
     required String mediaType,
@@ -53,6 +63,8 @@ class MediaModel {
           ? 'https://image.tmdb.org/t/p/w500$posterPath'
           : '',
       genre: mediaType,
+      mediaType: mediaType,
+      source: 'TMDB',
       releaseYear: date is String && date.length >= 4
           ? int.tryParse(date.substring(0, 4))
           : null,
@@ -66,10 +78,15 @@ class MediaModel {
     );
   }
 
-  // Membentuk model dari respons AniList.
+  // =========================
+  // ANILIST
+  // =========================
+
   factory MediaModel.fromAniList(Map<String, dynamic> json) {
     final titleData = json['title'] as Map<String, dynamic>? ?? {};
+
     final coverData = json['coverImage'] as Map<String, dynamic>? ?? {};
+
     final dateData = json['startDate'] as Map<String, dynamic>? ?? {};
 
     final title =
@@ -86,6 +103,8 @@ class MediaModel {
       title: title.toString(),
       imageUrl: (coverData['large'] ?? '').toString(),
       genre: 'Anime',
+      mediaType: 'Anime',
+      source: 'AniList',
       releaseYear: dateData['year'] is num
           ? (dateData['year'] as num).toInt()
           : null,
@@ -98,6 +117,114 @@ class MediaModel {
           : const [],
     );
   }
+
+  // =========================
+  // KITSU
+  // =========================
+
+  factory MediaModel.fromKitsu(Map<String, dynamic> json) {
+    final attributes = json['attributes'] as Map<String, dynamic>? ?? {};
+
+    final titles = attributes['titles'] as Map<String, dynamic>? ?? {};
+
+    final poster = attributes['posterImage'] as Map<String, dynamic>? ?? {};
+
+    final rawRating = attributes['averageRating'];
+    final rawGenres = attributes['genres'];
+
+    final title =
+        attributes['canonicalTitle'] ??
+        titles['en'] ??
+        titles['en_jp'] ??
+        titles['ja_jp'] ??
+        'Untitled';
+
+    final startDate = attributes['startDate'];
+
+    return MediaModel(
+      externalId: json['id']?.toString(),
+      title: title.toString(),
+      imageUrl: _kitsuPoster(poster),
+      genre: 'Anime',
+      mediaType: 'Anime',
+      source: 'Kitsu',
+      releaseYear: startDate is String && startDate.length >= 4
+          ? int.tryParse(startDate.substring(0, 4))
+          : null,
+      overview: attributes['synopsis'] as String?,
+      rating: rawRating is String
+          ? double.tryParse(rawRating)
+          : rawRating is num
+          ? rawRating.toDouble()
+          : null,
+      ratingScale: 100,
+      ratingSource: 'Kitsu',
+      genres: rawGenres is List
+          ? rawGenres
+                .map((item) {
+                  if (item is Map<String, dynamic>) {
+                    return item['name']?.toString() ?? '';
+                  }
+                  return '';
+                })
+                .where((item) => item.isNotEmpty)
+                .toList()
+          : const [],
+    );
+  }
+
+  /// Kitsu tidak selalu mengisi ukuran 'large', jadi dicoba beberapa ukuran.
+  static String _kitsuPoster(Map<String, dynamic> poster) {
+    for (final key in ['large', 'medium', 'original', 'small', 'tiny']) {
+      final url = poster[key]?.toString() ?? '';
+      if (url.isNotEmpty && url != 'null') {
+        return url.replaceFirst('http://', 'https://');
+      }
+    }
+    return '';
+  }
+
+  // =========================
+  // TVMAZE
+  // =========================
+
+  factory MediaModel.fromTvmaze(
+    Map<String, dynamic> json, {
+    required String mediaType,
+  }) {
+    final image = json['image'] as Map<String, dynamic>? ?? {};
+
+    final ratingData = json['rating'] as Map<String, dynamic>? ?? {};
+
+    final rawRating = ratingData['average'];
+
+    final premiered = json['premiered'];
+
+    final genresData = json['genres'];
+
+    return MediaModel(
+      externalId: json['id']?.toString(),
+      title: (json['name'] ?? 'Untitled').toString(),
+      imageUrl: (image['original'] ?? image['medium'] ?? '').toString(),
+      genre: mediaType,
+      mediaType: mediaType,
+      source: 'TVmaze',
+      releaseYear: premiered is String && premiered.length >= 4
+          ? int.tryParse(premiered.substring(0, 4))
+          : null,
+      overview: json['summary']?.toString(),
+      rating: rawRating is num ? rawRating.toDouble() : null,
+      ratingScale: 10,
+      ratingSource: 'TVmaze',
+      genres: genresData is List
+          ? genresData.map((item) => item.toString()).toList()
+          : const [],
+    );
+  }
+
+  // =========================
+  // FORMATTED RATING
+  // =========================
 
   String get formattedRating {
     if (rating == null) return 'Belum ada rating';

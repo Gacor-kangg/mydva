@@ -8,6 +8,7 @@ import 'repositories/media_repository.dart';
 import 'services/anilist_service.dart';
 import 'services/tmdb_service.dart';
 import 'ui_effects.dart';
+import 'services/kitsu_service.dart';
 
 class MediaListPage extends StatefulWidget {
   final String initialType;
@@ -23,6 +24,7 @@ class _MediaListPageState extends State<MediaListPage> {
   late final AnilistService _anilistService;
   late final MediaRepository _repository;
   late final MediaController _controller;
+  late final KitsuService _kitsuService;
 
   @override
   void initState() {
@@ -31,11 +33,13 @@ class _MediaListPageState extends State<MediaListPage> {
     // Inisialisasi service API.
     _tmdbService = TmdbService();
     _anilistService = AnilistService();
+    _kitsuService = KitsuService();
 
     // Inisialisasi repository.
     _repository = MediaRepository(
       tmdbService: _tmdbService,
       anilistService: _anilistService,
+      kitsuService: _kitsuService,
     );
 
     // Inisialisasi controller.
@@ -44,7 +48,7 @@ class _MediaListPageState extends State<MediaListPage> {
     // Mendengarkan perubahan state controller.
     _controller.addListener(_onControllerChanged);
 
-    // Mengambil data sesuai jenis media awal.
+    // Memuat kategori awal.
     _controller.loadMedia(widget.initialType);
   }
 
@@ -128,6 +132,14 @@ class _MediaListPageState extends State<MediaListPage> {
                       DropdownMenuItem(value: 'Film', child: Text('Film')),
                       DropdownMenuItem(value: 'Series', child: Text('Series')),
                       DropdownMenuItem(value: 'Anime', child: Text('Anime')),
+                      DropdownMenuItem(
+                        value: 'J-Drama',
+                        child: Text('J-Drama'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'K-Drama',
+                        child: Text('K-Drama'),
+                      ),
                     ],
 
                     onChanged: (value) {

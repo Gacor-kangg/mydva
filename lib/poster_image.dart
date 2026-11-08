@@ -69,6 +69,9 @@ class PosterImage extends StatelessWidget {
         height: height,
         fit: BoxFit.cover,
         frameBuilder: _fadeIn,
+        // Di web, CDN tanpa header CORS (mis. Kitsu) gagal dimuat sebagai
+        // canvas; mode ini otomatis jatuh ke elemen <img> biasa.
+        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
         errorBuilder: (context, error, stackTrace) => _placeholder(),
       );
     } else {
