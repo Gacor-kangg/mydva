@@ -860,3 +860,23 @@ final List<MediaModel> animeData = [
     releaseYear: 2019,
   ),
 ];
+
+
+
+final List<MediaModel> jdramaData = [
+  MediaModel(
+    title: 'Drawing Closer',
+    imageUrl: 'assets/drawing.jpg',
+    genre: 'J-Drama',
+    releaseYear: 2024,
+  ),
+];
+
+final List<MediaModel> kdramaData = [
+  MediaModel(
+    title: 'Twenty Five Twenty One',
+    imageUrl: 'https://thefangirlverdict.com/wp-content/uploads/2022/02/Twenty-Five-Twenty-One-001.jpeg',
+    genre: 'K-Drama',
+    releaseYear: 2022,
+  ),
+];

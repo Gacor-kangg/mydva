@@ -157,6 +157,25 @@ class _HomePageState extends State<HomePage> {
         listType: 'Anime',
         total: animeData.length,
       ),
+
+      // Belum ada halaman "Lihat semua" untuk drama (daftar lengkapnya
+      // masih khusus Film / Series / Anime), jadi listType dikosongkan.
+      _HomeSection(
+        title: 'J-Drama Terpopuler',
+        items: jdramaData.take(_popularLimit).toList(),
+      ),
+      _HomeSection(
+        title: 'J-Drama Terbaru',
+        items: sortedByNewest(jdramaData).take(_newestLimit).toList(),
+      ),
+      _HomeSection(
+        title: 'K-Drama Terpopuler',
+        items: kdramaData.take(_popularLimit).toList(),
+      ),
+      _HomeSection(
+        title: 'K-Drama Terbaru',
+        items: sortedByNewest(kdramaData).take(_newestLimit).toList(),
+      ),
     ];
   }
 
