@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-
 class FadeSlideTransitionsBuilder extends PageTransitionsBuilder {
   const FadeSlideTransitionsBuilder();
 
@@ -30,7 +29,6 @@ class FadeSlideTransitionsBuilder extends PageTransitionsBuilder {
     );
   }
 }
-
 
 class HoverLift extends StatefulWidget {
   final Widget child;
@@ -91,17 +89,11 @@ class _HoverLiftState extends State<HoverLift> {
   }
 }
 
-
-
 class Reveal extends StatefulWidget {
   final Widget child;
   final Duration delay;
 
-  const Reveal({
-    super.key,
-    required this.child,
-    this.delay = Duration.zero,
-  });
+  const Reveal({super.key, required this.child, this.delay = Duration.zero});
 
   @override
   State<Reveal> createState() => _RevealState();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'home_page.dart';
 import 'login_page.dart';
 import 'media_data.dart';
@@ -177,7 +178,7 @@ class ProfilePage extends StatelessWidget {
               );
             },
           ),
-          
+
           _headerButton(text: 'Settings', onPressed: () {}),
           _headerButton(
             text: 'Logout',

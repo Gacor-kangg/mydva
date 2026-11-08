@@ -5,7 +5,6 @@ import 'models/media_model.dart';
 import 'poster_image.dart';
 import 'ui_effects.dart';
 
-
 class _Review {
   final String user;
   final int? score;
@@ -175,7 +174,8 @@ class _MediaDetailPageState extends State<MediaDetailPage> {
       _Comment(
         user: 'Dimas',
         date: DateTime(2026, 10, 3),
-        text: 'Langsung dari yang pertama saja, ceritanya sudah berdiri sendiri.',
+        text:
+            'Langsung dari yang pertama saja, ceritanya sudah berdiri sendiri.',
       ),
     );
 
@@ -288,7 +288,6 @@ class _MediaDetailPageState extends State<MediaDetailPage> {
     );
   }
 
-
   Widget _buildHeader(BuildContext context) {
     return Container(
       height: 60,
@@ -328,18 +327,12 @@ class _MediaDetailPageState extends State<MediaDetailPage> {
     );
   }
 
-
   Widget _buildHero(bool wide) {
     final media = widget.media;
 
     final poster = ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: PosterImage(
-        media: media,
-        width: 210,
-        height: 300,
-        textSize: 64,
-      ),
+      child: PosterImage(media: media, width: 210, height: 300, textSize: 64),
     );
 
     final metaParts = <String>[
@@ -696,9 +689,7 @@ class _MediaDetailPageState extends State<MediaDetailPage> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
-          children: [
-            for (int i = 0; i < _tabLabels.length; i++) _tabItem(i),
-          ],
+          children: [for (int i = 0; i < _tabLabels.length; i++) _tabItem(i)],
         ),
       ),
     );
@@ -848,7 +839,8 @@ class _MediaDetailPageState extends State<MediaDetailPage> {
       if (widget.media.releaseYear != null)
         MapEntry('Year', widget.media.releaseYear.toString()),
       if (_detail.duration != null) MapEntry('Duration', _detail.duration!),
-      if (_detail.credit != null) MapEntry(_detail.creditLabel, _detail.credit!),
+      if (_detail.credit != null)
+        MapEntry(_detail.creditLabel, _detail.credit!),
       if (_detail.genres.isNotEmpty)
         MapEntry('Genres', _detail.genres.join(', ')),
     ];
@@ -1020,9 +1012,7 @@ class _MediaDetailPageState extends State<MediaDetailPage> {
 
     if (_type == 'Anime') {
       return Column(
-        children: [
-          for (final member in _detail.cast) _animeCastRow(member),
-        ],
+        children: [for (final member in _detail.cast) _animeCastRow(member)],
       );
     }
 
@@ -1240,10 +1230,7 @@ class _MediaDetailPageState extends State<MediaDetailPage> {
         const SizedBox(height: 14),
 
         for (final review in sorted)
-          Reveal(
-            key: ObjectKey(review),
-            child: _reviewCard(review),
-          ),
+          Reveal(key: ObjectKey(review), child: _reviewCard(review)),
       ],
     );
   }
@@ -1433,7 +1420,9 @@ class _MediaDetailPageState extends State<MediaDetailPage> {
                 maxLines: 3,
                 cursorColor: Colors.white,
                 style: const TextStyle(color: Colors.white, fontSize: 14),
-                decoration: _inputDecoration('Tulis komentar atau pertanyaan...'),
+                decoration: _inputDecoration(
+                  'Tulis komentar atau pertanyaan...',
+                ),
               ),
               const SizedBox(height: 12),
               Align(
@@ -1462,10 +1451,7 @@ class _MediaDetailPageState extends State<MediaDetailPage> {
         ),
         const SizedBox(height: 16),
         for (final comment in _comments)
-          Reveal(
-            key: ObjectKey(comment),
-            child: _commentCard(comment),
-          ),
+          Reveal(key: ObjectKey(comment), child: _commentCard(comment)),
       ],
     );
   }
@@ -1502,7 +1488,9 @@ class _MediaDetailPageState extends State<MediaDetailPage> {
                 margin: const EdgeInsets.only(left: 18, top: 10),
                 padding: const EdgeInsets.only(left: 14),
                 decoration: const BoxDecoration(
-                  border: Border(left: BorderSide(color: borderColor, width: 2)),
+                  border: Border(
+                    left: BorderSide(color: borderColor, width: 2),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

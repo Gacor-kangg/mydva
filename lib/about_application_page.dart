@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class AboutApplicationPage extends StatelessWidget {
@@ -33,19 +32,12 @@ class AboutApplicationPage extends StatelessWidget {
                       color: Colors.blue.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.apps,
-                      size: 55,
-                      color: Colors.blue,
-                    ),
+                    child: const Icon(Icons.apps, size: 55, color: Colors.blue),
                   ),
                   const SizedBox(height: 16),
                   const Text(
                     'About Applications',
-                    style: TextStyle(
-                      fontSize: 23,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -61,10 +53,7 @@ class AboutApplicationPage extends StatelessWidget {
 
             const Text(
               'Tentang Aplikasi',
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
 
@@ -79,10 +68,7 @@ class AboutApplicationPage extends StatelessWidget {
 
             const Text(
               'Tim Pengembang',
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
 
@@ -108,9 +94,7 @@ class AboutApplicationPage extends StatelessWidget {
                         : member['nama']!,
                   ),
                   subtitle: Text(
-                    member['nim']!.isEmpty
-                        ? 'NIM: -'
-                        : 'NIM: ${member['nim']}',
+                    member['nim']!.isEmpty ? 'NIM: -' : 'NIM: ${member['nim']}',
                   ),
                   trailing: const Icon(Icons.person_outline),
                 ),
@@ -122,10 +106,7 @@ class AboutApplicationPage extends StatelessWidget {
             const Center(
               child: Text(
                 '© 2026 Application Development Team',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ),
           ],

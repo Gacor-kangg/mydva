@@ -14,7 +14,6 @@ class _HomeSection {
 
   final String? listType;
 
-  
   final int total;
 
   _HomeSection({
@@ -51,7 +50,6 @@ class _HomePageState extends State<HomePage> {
 
   static const double _headerHeight = 62;
 
-  
   static const int _popularLimit = 15;
   static const int _newestLimit = 12;
 
@@ -91,7 +89,7 @@ class _HomePageState extends State<HomePage> {
           ...movieData.take(2),
           ...seriesData.take(2),
           ...animeData.take(2),
-          
+
           _findByTitle(movieData, 'The Box'),
           _findByTitle(movieData, 'Dead Poets Society'),
           _findByTitle(seriesData, 'The Summer I Turned Pretty'),
@@ -138,9 +136,7 @@ class _HomePageState extends State<HomePage> {
 
   /// Mengambil satu judul dari list berdasarkan nama (tidak peka huruf besar/kecil).
   MediaModel _findByTitle(List<MediaModel> list, String title) {
-    return list.firstWhere(
-      (m) => m.title.toLowerCase() == title.toLowerCase(),
-    );
+    return list.firstWhere((m) => m.title.toLowerCase() == title.toLowerCase());
   }
 
   GlobalKey _keyFor(String title) {
@@ -163,10 +159,7 @@ class _HomePageState extends State<HomePage> {
     if (box == null || !box.attached) return;
 
     final sectionTop = box.localToGlobal(Offset.zero).dy;
-    final target = (_scrollController.offset +
-            sectionTop -
-            _headerTotal() -
-            16)
+    final target = (_scrollController.offset + sectionTop - _headerTotal() - 16)
         .clamp(0.0, _scrollController.position.maxScrollExtent)
         .toDouble();
 
@@ -216,9 +209,7 @@ class _HomePageState extends State<HomePage> {
   void _openList(String type) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => MediaListPage(initialType: type),
-      ),
+      MaterialPageRoute(builder: (context) => MediaListPage(initialType: type)),
     );
   }
 
@@ -239,10 +230,7 @@ class _HomePageState extends State<HomePage> {
           // ======================================================
           SingleChildScrollView(
             controller: _scrollController,
-            padding: EdgeInsets.only(
-              top: _headerTotal() + 24,
-              bottom: 40,
-            ),
+            padding: EdgeInsets.only(top: _headerTotal() + 24, bottom: 40),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1400),
@@ -267,12 +255,7 @@ class _HomePageState extends State<HomePage> {
           // ======================================================
           // HEADER (NAVBAR)
           // ======================================================
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: _buildHeader(),
-          ),
+          Positioned(top: 0, left: 0, right: 0, child: _buildHeader()),
         ],
       ),
     );
@@ -402,9 +385,7 @@ class _HomePageState extends State<HomePage> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const ProfilePage(),
-            ),
+            MaterialPageRoute(builder: (context) => const ProfilePage()),
           );
         },
         child: Container(
@@ -440,9 +421,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(
-            child: Container(height: 1, color: borderColor),
-          ),
+          Expanded(child: Container(height: 1, color: borderColor)),
           if (section.listType != null) ...[
             const SizedBox(width: 4),
             TextButton(
@@ -531,9 +510,7 @@ class _HomePageState extends State<HomePage> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => MediaDetailPage(media: item),
-          ),
+          MaterialPageRoute(builder: (context) => MediaDetailPage(media: item)),
         );
       },
       child: Container(

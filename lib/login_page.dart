@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'home_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -16,22 +17,17 @@ class _LoginPageState extends State<LoginPage> {
   bool rememberMe = false;
 
   void login() {
-    if (usernameController.text.isEmpty ||
-        passwordController.text.isEmpty) {
+    if (usernameController.text.isEmpty || passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Username dan password harus diisi'),
-        ),
+        const SnackBar(content: Text('Username dan password harus diisi')),
       );
       return;
     }
 
     Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(
-    builder: (context) => const HomePage(),
-  ),
-);
+      context,
+      MaterialPageRoute(builder: (context) => const HomePage()),
+    );
   }
 
   @override
@@ -44,30 +40,19 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-
-           Container(
-  width: 80,
-  height: 80,
-  margin: const EdgeInsets.only(bottom: 24),
-  child: Image.asset(                     
-    'assets/pnp.jpg',
-    fit: BoxFit.contain,
-  ),
-),
+              Container(
+                width: 80,
+                height: 80,
+                margin: const EdgeInsets.only(bottom: 24),
+                child: Image.asset('assets/pnp.jpg', fit: BoxFit.contain),
+              ),
 
               Container(
                 width: 360,
-                padding: const EdgeInsets.fromLTRB(
-                  24,
-                  27,
-                  24,
-                  25,
-                ),
+                padding: const EdgeInsets.fromLTRB(24, 27, 24, 25),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(
-                    color: const Color(0xffdddddd),
-                  ),
+                  border: Border.all(color: const Color(0xffdddddd)),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x22000000),
@@ -80,14 +65,10 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     // USERNAME
                     const Text(
                       'Username',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xff50575e),
-                      ),
+                      style: TextStyle(fontSize: 14, color: Color(0xff50575e)),
                     ),
 
                     const SizedBox(height: 6),
@@ -102,15 +83,11 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.zero,
-                            borderSide: BorderSide(
-                              color: Color(0xffdcdcde),
-                            ),
+                            borderSide: BorderSide(color: Color(0xffdcdcde)),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.zero,
-                            borderSide: BorderSide(
-                              color: Color(0xffdcdcde),
-                            ),
+                            borderSide: BorderSide(color: Color(0xffdcdcde)),
                           ),
                           focusedBorder: const OutlineInputBorder(
                             borderRadius: BorderRadius.zero,
@@ -128,10 +105,7 @@ class _LoginPageState extends State<LoginPage> {
                     // PASSWORD
                     const Text(
                       'Password',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xff50575e),
-                      ),
+                      style: TextStyle(fontSize: 14, color: Color(0xff50575e)),
                     ),
 
                     const SizedBox(height: 6),
@@ -166,9 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           enabledBorder: const OutlineInputBorder(
                             borderRadius: BorderRadius.zero,
-                            borderSide: BorderSide(
-                              color: Color(0xffdcdcde),
-                            ),
+                            borderSide: BorderSide(color: Color(0xffdcdcde)),
                           ),
                           focusedBorder: const OutlineInputBorder(
                             borderRadius: BorderRadius.zero,
@@ -185,7 +157,6 @@ class _LoginPageState extends State<LoginPage> {
                     // REMEMBER ME + LOGIN
                     Row(
                       children: [
-
                         SizedBox(
                           width: 24,
                           height: 24,
@@ -196,9 +167,7 @@ class _LoginPageState extends State<LoginPage> {
                                 rememberMe = value ?? false;
                               });
                             },
-                            side: const BorderSide(
-                              color: Color(0xff8c8f94),
-                            ),
+                            side: const BorderSide(color: Color(0xff8c8f94)),
                           ),
                         ),
 
@@ -219,8 +188,18 @@ class _LoginPageState extends State<LoginPage> {
                           child: ElevatedButton(
                             onPressed: login,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color.fromARGB(255, 2, 255, 15),
-                              foregroundColor: const Color.fromARGB(255, 251, 251, 251),
+                              backgroundColor: const Color.fromARGB(
+                                255,
+                                2,
+                                255,
+                                15,
+                              ),
+                              foregroundColor: const Color.fromARGB(
+                                255,
+                                251,
+                                251,
+                                251,
+                              ),
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
@@ -231,9 +210,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             child: const Text(
                               'Log In',
-                              style: TextStyle(
-                                fontSize: 13,
-                              ),
+                              style: TextStyle(fontSize: 13),
                             ),
                           ),
                         ),
@@ -251,17 +228,13 @@ class _LoginPageState extends State<LoginPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-
                   GestureDetector(
                     onTap: () {
                       // Register
                     },
                     child: const Text(
                       'Register',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xff2271b1),
-                      ),
+                      style: TextStyle(fontSize: 13, color: Color(0xff2271b1)),
                     ),
                   ),
 
@@ -269,22 +242,15 @@ class _LoginPageState extends State<LoginPage> {
                     padding: EdgeInsets.symmetric(horizontal: 6),
                     child: Text(
                       '|',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xff8c8f94),
-                      ),
+                      style: TextStyle(fontSize: 13, color: Color(0xff8c8f94)),
                     ),
                   ),
 
                   GestureDetector(
-                    onTap: () {
-                    },
+                    onTap: () {},
                     child: const Text(
                       'Lost your password?',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xff2271b1),
-                      ),
+                      style: TextStyle(fontSize: 13, color: Color(0xff2271b1)),
                     ),
                   ),
                 ],
