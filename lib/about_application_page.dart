@@ -32,7 +32,7 @@ class AboutApplicationPage extends StatelessWidget {
       nama: 'Maksima Insan A',
       nim: '25051204438',
       deskripsi:
-          'Ceritakan sedikit tentang dirimu, minat, dan kontribusimu di proyek ini.',
+          'I for insyaalllah.',
       foto: 'assets/members/maksima.jpg',
     ),
     _Member(
@@ -40,7 +40,7 @@ class AboutApplicationPage extends StatelessWidget {
       nim: '25051204437',
       deskripsi:
           'hebad kamu mas',
-      foto: 'assets/najwan.jpeg',
+      foto: 'assets/members/najwan.jpeg',
     ),
     _Member(
       nama: 'Geacealsia Shello A',
