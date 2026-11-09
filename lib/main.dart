@@ -1,11 +1,17 @@
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'login_page.dart';
-import 'ui_effects.dart';
+import 'view/login_page.dart';
+import 'view/ui_effects.dart';
 
-void main() {
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await dotenv.load(fileName: ".env");
+
   runApp(const MyApp());
 }
 

@@ -14,8 +14,9 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  http: ^1.2.2
+  dio: ^5.9.0
   shared_preferences: ^2.3.2
+  flutter_dotenv: ^6.0.1
 
 dev_dependencies:
   flutter_test:
@@ -28,124 +29,8 @@ flutter:
   uses-material-design: true
   
   assets:
+  - .env
   - assets/pnp.jpg
   - assets/masha.jpg
-  - assets/supercub.jpg
-  - assets/ada.jpg
-  - assets/before.jpg
-  - assets/dune.jpg
-  - assets/eternal.jpg
-  - assets/everything.jpg
-  - assets/forrest.jpg
-  - assets/getout.jpg
-  - assets/gladiator.jpg
-  - assets/godfather.jpg
-  - assets/inception.jpg
-  - assets/interstellar.jpg
-  - assets/joker.jpg
-  - assets/la la land.jpg
-  - assets/laskar.jpg
-  - assets/leon.jpg
-  - assets/memories.jpg
-  - assets/oppenheimer.jpg
-  - assets/parasite.jpg
-  - assets/pengabdi.jpg
-  - assets/pulp.jpg
-  - assets/schindler.jpg
-  - assets/se7en.jpg
-  - assets/shawshank.jpg
-  - assets/the matrix.jpg
-  - assets/titanic.jpg
-  - assets/train.jpg
-  - assets/whiplash.jpg
-  - assets/aot.jpg
-  - assets/death.jpg
-  - assets/fmab.jpg
-  - assets/steins.jpg
-  - assets/cowboy.jpg
-  - assets/naruto.jpg
-  - assets/one.jpg
-  - assets/demon.jpg
-  - assets/all.jpg
-  - assets/better call saul.jpg
-  - assets/black mirror.jpg
-  - assets/bocchi.jpg
-  - assets/chainsaw.jpg
-  - assets/chernobyl.jpg
-  - assets/clannad.jpg
-  - assets/code.jpg
-  - assets/crash.jpg
-  - assets/dark.jpg
-  - assets/evangelion.jpg
-  - assets/friends.jpg
-  - assets/frieren.jpg
-  - assets/good doctor.jpg
-  - assets/got.jpg
-  - assets/guardian.jpg
-  - assets/house.jpg
-  - assets/hunter.jpg
-  - assets/itaewon.jpg
-  - assets/jjk.jpg
-  - assets/kaguya.jpg
-  - assets/made.jpg
-  - assets/mob.jpg
-  - assets/money.jpg
-  - assets/monster.jpg
-  - assets/mushi.jpg
-  - assets/narcos.jpg
-  - assets/opm.jpg
-  - assets/reply.jpg
-  - assets/spy.jpg
-  - assets/squid.jpg
-  - assets/stranger.jpg
-  - assets/succesion.jpg
-  - assets/the bear.jpg
-  - assets/the last of us.jpg
-  - assets/the mandalorian.jpg
-  - assets/the office.jpg
-  - assets/the witcher.jpg
-  - assets/true detective.jpg
-  - assets/vincenzo.jpg
-  - assets/vinland.jpg
-  - assets/violet.jpg
-  - assets/wandavision.jpg
-  - assets/wednesday.jpg
-  - assets/your.jpg
-  - assets/yuru camp.jpg
-  - assets/10.jpg
-  - assets/13.jpg
-  - assets/atonement.jpg
-  - assets/bnd.jpg
-  - assets/bridge.jpg
-  - assets/cinderella.jpg
-  - assets/despicable.jpg
-  - assets/dps.jpg
-  - assets/drawing.jpg
-  - assets/even.jpg
-  - assets/far.jpg
-  - assets/ghost.jpg
-  - assets/gone.jpg
-  - assets/hear.jpg
-  - assets/homecoming.jpg
-  - assets/how to.jpg
-  - assets/jeanne.jpg
-  - assets/little.jpg
-  - assets/man.jpg
-  - assets/mr plankton.jpg
-  - assets/no.jpg
-  - assets/notebook.jpg
-  - assets/sm1.jpg
-  - assets/sm2.jpg
-  - assets/sm3.jpg
-  - assets/sore.jpg
-  - assets/spirit.jpg
-  - assets/strong.jpg
-  - assets/tasm1.jpg
-  - assets/tasm2.jpg
-  - assets/the box.jpg
-  - assets/tsip.jpg
-  - assets/upin.jpg
-  - assets/women.jpg
-  - assets/youth.jpg
   - assets/members/najwan.jpeg
   - assets/members/maksima.jpg

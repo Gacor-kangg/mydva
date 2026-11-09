@@ -1,15 +1,24 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
 import '../config/api_config.dart';
 import '../models/media_model.dart';
+import 'api_client.dart';
 import 'api_exception.dart';
 
 class TmdbService {
-  final http.Client _client;
+  final Dio _dio;
 
-  TmdbService({http.Client? client}) : _client = client ?? http.Client();
+  TmdbService({Dio? dio})
+    : _dio =
+          dio ??
+          ApiClient.create(
+            baseUrl: ApiConfig.tmdbBaseUrl,
+            headers: {
+              'Authorization': 'Bearer ${ApiConfig.tmdbAccessToken}',
+              'accept': 'application/json',
+            },
+            queryParameters: {'language': ApiConfig.language},
+          );
 
   // Pilihan pengurutan untuk drama (endpoint /discover/tv).
   static const String sortPopular = 'popularity.desc';
@@ -150,33 +159,13 @@ class TmdbService {
       throw const ApiException('TMDB Access Token belum dikonfigurasi.');
     }
 
-    final uri = Uri.parse('${ApiConfig.tmdbBaseUrl}$endpoint').replace(
-      queryParameters: {'language': ApiConfig.language, ...parameters},
-    );
-
     try {
-      final response = await _client
-          .get(
-            uri,
-            headers: {
-              'Authorization': 'Bearer ${ApiConfig.tmdbAccessToken}',
-              'accept': 'application/json',
-            },
-          )
-          .timeout(ApiConfig.requestTimeout);
+      final response = await _dio.get<dynamic>(
+        endpoint,
+        queryParameters: parameters,
+      );
 
-      if (response.statusCode != 200) {
-        throw ApiException(
-          'Gagal mengambil data $mediaType dari TMDB.',
-          statusCode: response.statusCode,
-        );
-      }
-
-      final decoded = jsonDecode(response.body);
-
-      if (decoded is! Map<String, dynamic>) {
-        throw const ApiException('Format respons TMDB tidak valid.');
-      }
+      final decoded = ApiClient.asJsonMap(response.data, source: 'TMDB');
 
       final results = decoded['results'];
 
@@ -194,12 +183,14 @@ class TmdbService {
           .toList();
     } on ApiException {
       rethrow;
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error, source: 'TMDB');
     } catch (error) {
-      throw ApiException('Tidak dapat terhubung ke TMDB: $error');
+      throw ApiException('Gagal memproses data TMDB: $error');
     }
   }
 
   void dispose() {
-    _client.close();
+    _dio.close();
   }
 }

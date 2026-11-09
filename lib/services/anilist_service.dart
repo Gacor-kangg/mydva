@@ -1,15 +1,20 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
 import '../config/api_config.dart';
 import '../models/media_model.dart';
+import 'api_client.dart';
 import 'api_exception.dart';
 
 class AnilistService {
-  final http.Client _client;
+  final Dio _dio;
 
-  AnilistService({http.Client? client}) : _client = client ?? http.Client();
+  AnilistService({Dio? dio})
+    : _dio =
+          dio ??
+          ApiClient.create(
+            baseUrl: ApiConfig.anilistUrl,
+            headers: {'Accept': 'application/json'},
+          );
 
   Future<List<MediaModel>> getTrendingAnime({
     int page = 1,
@@ -104,26 +109,13 @@ class AnilistService {
     required Map<String, dynamic> variables,
   }) async {
     try {
-      final response = await _client
-          .post(
-            Uri.parse(ApiConfig.anilistUrl),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: jsonEncode({'query': query, 'variables': variables}),
-          )
-          .timeout(ApiConfig.requestTimeout);
+      // Dio otomatis mengirim Map sebagai JSON (Content-Type: application/json).
+      final response = await _dio.post<dynamic>(
+        '',
+        data: {'query': query, 'variables': variables},
+      );
 
-      if (response.statusCode != 200) {
-        throw ApiException(
-          'AniList gagal merespons. HTTP ${response.statusCode}.',
-          statusCode: response.statusCode,
-        );
-      }
-
-      final Map<String, dynamic> decoded =
-          jsonDecode(response.body) as Map<String, dynamic>;
+      final decoded = ApiClient.asJsonMap(response.data, source: 'AniList');
 
       if (decoded['errors'] != null) {
         throw ApiException(
@@ -145,16 +137,14 @@ class AnilistService {
           .toList();
     } on ApiException {
       rethrow;
-    } on http.ClientException {
-      throw const ApiException(
-        'Tidak dapat terhubung ke AniList. Periksa koneksi internet.',
-      );
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error, source: 'AniList');
     } catch (error) {
       throw ApiException('Gagal memproses data AniList: $error');
     }
   }
 
   void dispose() {
-    _client.close();
+    _dio.close();
   }
 }

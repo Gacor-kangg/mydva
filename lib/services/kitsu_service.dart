@@ -1,16 +1,21 @@
-import 'dart:async';
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
 import '../config/api_config.dart';
 import '../models/media_model.dart';
+import 'api_client.dart';
 import 'api_exception.dart';
 
 class KitsuService {
-  final http.Client _client;
+  final Dio _dio;
 
-  KitsuService({http.Client? client}) : _client = client ?? http.Client();
+  KitsuService({Dio? dio})
+    : _dio =
+          dio ??
+          ApiClient.create(
+            baseUrl: ApiConfig.kitsuBaseUrl,
+            // Content-Type tidak perlu untuk GET dan memicu preflight CORS.
+            headers: {'Accept': 'application/vnd.api+json'},
+          );
 
   static const int maxPerPage = 20;
 
@@ -66,32 +71,13 @@ class KitsuService {
 
   /// Mengambil dan memetakan data anime dari Kitsu.
   Future<List<MediaModel>> _fetchAnime(Map<String, String> parameters) async {
-    final uri = Uri.parse('${ApiConfig.kitsuBaseUrl}/anime')
-        .replace(queryParameters: parameters);
-
     try {
-      final response = await _client
-          .get(
-            uri,
-            headers: {
-              'Accept': 'application/vnd.api+json',
-              'Content-Type': 'application/vnd.api+json',
-            },
-          )
-          .timeout(ApiConfig.requestTimeout);
+      final response = await _dio.get<dynamic>(
+        '/anime',
+        queryParameters: parameters,
+      );
 
-      if (response.statusCode != 200) {
-        throw ApiException(
-          'Gagal mengambil data dari Kitsu.',
-          statusCode: response.statusCode,
-        );
-      }
-
-      final decoded = jsonDecode(response.body);
-
-      if (decoded is! Map<String, dynamic>) {
-        throw const ApiException('Format respons Kitsu tidak valid.');
-      }
+      final decoded = ApiClient.asJsonMap(response.data, source: 'Kitsu');
 
       final results = decoded['data'];
 
@@ -166,18 +152,14 @@ class KitsuService {
       return animeList;
     } on ApiException {
       rethrow;
-    } on TimeoutException {
-      throw const ApiException(
-        'Koneksi ke Kitsu terlalu lama. Silakan coba lagi.',
-      );
-    } on FormatException {
-      throw const ApiException('Respons Kitsu tidak dapat dibaca.');
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error, source: 'Kitsu');
     } catch (error) {
-      throw ApiException('Tidak dapat terhubung ke Kitsu: $error');
+      throw ApiException('Gagal memproses data Kitsu: $error');
     }
   }
 
   void dispose() {
-    _client.close();
+    _dio.close();
   }
 }
