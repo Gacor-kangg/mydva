@@ -57,11 +57,11 @@ class AboutApplicationPage extends StatelessWidget {
       foto: 'assets/members/saha.jpg',
     ),
     _Member(
-      nama: 'Tri',
-      nim: '12',
+      nama: 'Tri Oktavia R ',
+      nim: '25051204413',
       deskripsi:
-          'Ceritakan sedikit tentang dirimu, minat, dan kontribusimu di proyek ini.',
-      foto: 'assets/members/tri.jpg',
+          'Tidak harus menjadi yang tercepat, cukup jangan berhenti melangkah.',
+      foto: 'assets/members/tri.jpeg',
     ),
   ];
 
