@@ -4,25 +4,25 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
-import 'media_data.dart';
 import 'media_detail_page.dart';
 import 'media_listpage.dart';
 import '../models/media_model.dart';
+import '../repositories/media_repository.dart';
+import '../services/anilist_service.dart';
+import '../services/kitsu_service.dart';
+import '../services/tmdb_service.dart';
 import 'poster_image.dart';
 import 'profile_page.dart';
-import '../services/tmdb_service.dart';
 import 'ui_effects.dart';
 
 class _HomeSection {
   final String title;
   final List<MediaModel> items;
-
   final String? listType;
-
   final int total;
-
-  /// true = kartu dibuat lebih besar + ada badge tipe (dipakai untuk rekomendasi).
   final bool featured;
+  final bool isLoading;
+  final String? errorMessage;
 
   _HomeSection({
     required this.title,
@@ -30,6 +30,8 @@ class _HomeSection {
     this.listType,
     this.total = 0,
     this.featured = false,
+    this.isLoading = false,
+    this.errorMessage,
   });
 }
 
@@ -41,58 +43,62 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // ============================================================
-  // DATA DRAMA DARI TMDB
-  // ============================================================
-  // Sebelum data masuk (atau jika gagal / token belum diisi), home
-  // memakai daftar statis dari media_data.dart.
+  // Data Home seluruhnya dimuat melalui API menggunakan MediaRepository.
+  late final TmdbService _tmdbService;
+  late final AnilistService _anilistService;
+  late final KitsuService _kitsuService;
+  late final MediaRepository _repository;
 
-  final TmdbService _tmdb = TmdbService();
-
-  List<MediaModel>? _jdramaPopular;
-  List<MediaModel>? _jdramaNewest;
-  List<MediaModel>? _kdramaPopular;
-  List<MediaModel>? _kdramaNewest;
-
-  // ============================================================
-  // COLORS (diambil dari AppColors)
-  // ============================================================
+  final Map<String, List<MediaModel>> _homeData = {
+    'Film': [],
+    'Series': [],
+    'Anime': [],
+    'J-Drama': [],
+    'K-Drama': [],
+  };
+  final Map<String, String?> _homeErrors = {
+    'Film': null,
+    'Series': null,
+    'Anime': null,
+    'J-Drama': null,
+    'K-Drama': null,
+  };
+  bool _isLoading = true;
 
   static const Color backgroundColor = AppColors.background;
   static const Color headerColor = AppColors.panel;
   static const Color cardColor = AppColors.card;
   static const Color borderColor = AppColors.border;
-
   static const Color lightBlue = AppColors.lightBlue;
   static const Color mutedText = AppColors.mutedText;
 
-  // ============================================================
-  // PENGATURAN
-  // ============================================================
-
   static const double _headerHeight = 62;
-
   static const int _popularLimit = 15;
   static const int _newestLimit = 12;
-
   static const int _heroCount = 5;
   static const Duration _heroInterval = Duration(seconds: 6);
 
-  // ============================================================
-  // STATE
-  // ============================================================
+  static const List<String> _sectionTitles = [
+    'Rekomendasi Untukmu',
+    'Series Terbaru',
+    'Series Unggulan',
+    'Film Populer',
+    'Film Terbaru',
+    'Anime Terpopuler',
+    'Anime Terbaru',
+    'J-Drama Terpopuler',
+    'J-Drama Terbaru',
+    'K-Drama Terpopuler',
+    'K-Drama Terbaru',
+  ];
 
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _sectionKeys = {};
-
   late final List<String> _navTitles;
   String _activeSection = '';
-
-  // Seberapa pekat header (0 = hampir transparan di atas hero, 1 = solid).
   final ValueNotifier<double> _headerOpacity = ValueNotifier<double>(0);
 
-  // Hero
-  late final List<MediaModel> _heroItems;
+  List<MediaModel> _heroItems = [];
   final PageController _heroController = PageController();
   Timer? _heroTimer;
   int _heroIndex = 0;
@@ -100,179 +106,201 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _navTitles = _buildSections().map((s) => s.title).toList();
-    _heroItems = _buildHeroItems();
+    _navTitles = List<String>.from(_sectionTitles);
+    _tmdbService = TmdbService();
+    _anilistService = AnilistService();
+    _kitsuService = KitsuService();
+    _repository = MediaRepository(
+      tmdbService: _tmdbService,
+      anilistService: _anilistService,
+      kitsuService: _kitsuService,
+    );
     _scrollController.addListener(_onScroll);
-    _startHeroTimer();
-    _loadDramas();
+    _loadHomeData();
   }
 
-  Future<void> _loadDramas() async {
-    Future<List<MediaModel>?> safe(Future<List<MediaModel>> f) async {
-      try {
-        final result = await f;
-        return result.isEmpty ? null : result;
-      } catch (error) {
-        debugPrint('Gagal memuat drama dari TMDB: $error');
-        return null;
-      }
+  Future<List<MediaModel>> _loadCategory(
+    String category,
+    Future<List<MediaModel>> request,
+  ) async {
+    try {
+      final items = await request;
+      _homeErrors[category] = items.isEmpty
+          ? 'Belum ada data yang dapat ditampilkan.'
+          : null;
+      return items;
+    } catch (error) {
+      _homeErrors[category] = error.toString();
+      debugPrint('Gagal memuat $category: $error');
+      return [];
     }
+  }
 
-    final results = await Future.wait([
-      safe(_tmdb.getJDrama()),
-      safe(_tmdb.getJDrama(sortBy: TmdbService.sortNewest)),
-      safe(_tmdb.getKDrama()),
-      safe(_tmdb.getKDrama(sortBy: TmdbService.sortNewest)),
+  Future<void> _loadHomeData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      for (final key in _homeErrors.keys) {
+        _homeErrors[key] = null;
+      }
+    });
+
+    final results = await Future.wait<List<MediaModel>>([
+      _loadCategory('Film', _repository.getMovies(page: 1)),
+      _loadCategory('Series', _repository.getSeries(page: 1)),
+      _loadCategory('Anime', _repository.getAnime(page: 1, perPage: 20)),
+      _loadCategory('J-Drama', _repository.getJDrama(pages: 3)),
+      _loadCategory('K-Drama', _repository.getKDrama(pages: 3)),
     ]);
 
     if (!mounted) return;
-
     setState(() {
-      _jdramaPopular = results[0];
-      _jdramaNewest = results[1];
-      _kdramaPopular = results[2];
-      _kdramaNewest = results[3];
+      _homeData['Film'] = results[0];
+      _homeData['Series'] = results[1];
+      _homeData['Anime'] = results[2];
+      _homeData['J-Drama'] = results[3];
+      _homeData['K-Drama'] = results[4];
+      _isLoading = false;
+      _heroItems = _buildHeroItems();
+      _heroIndex = 0;
     });
+    if (_heroController.hasClients) _heroController.jumpToPage(0);
+    _startHeroTimer();
   }
 
   @override
   void dispose() {
-    _tmdb.dispose();
     _heroTimer?.cancel();
     _heroController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _headerOpacity.dispose();
+    _repository.dispose();
     super.dispose();
   }
 
-  // ============================================================
-  // DAFTAR SECTION
-  // ============================================================
+  List<MediaModel> _newestFirst(List<MediaModel> items) {
+    final sorted = List<MediaModel>.from(items);
+    sorted.sort((a, b) => (b.releaseYear ?? 0).compareTo(a.releaseYear ?? 0));
+    return sorted;
+  }
 
   List<_HomeSection> _buildSections() {
+    final movies = _homeData['Film'] ?? [];
+    final series = _homeData['Series'] ?? [];
+    final anime = _homeData['Anime'] ?? [];
+    final jdrama = _homeData['J-Drama'] ?? [];
+    final kdrama = _homeData['K-Drama'] ?? [];
+
+    final featured = <MediaModel>[
+      ...movies.take(2),
+      ...series.take(2),
+      ...anime.take(2),
+      ...jdrama.take(1),
+      ...kdrama.take(1),
+    ];
+    final seen = <String>{};
+    final recommendations = featured
+        .where((item) {
+          final key = '${item.mediaType}:${item.externalId ?? item.title}'
+              .toLowerCase();
+          return item.imageUrl.isNotEmpty && seen.add(key);
+        })
+        .take(8)
+        .toList();
+
     return [
       _HomeSection(
         title: 'Rekomendasi Untukmu',
         featured: true,
-        items: [
-          ...movieData.take(2),
-          ...seriesData.take(2),
-          ...animeData.take(2),
-
-          _findByTitle(movieData, 'The Box'),
-          _findByTitle(movieData, 'Dead Poets Society'),
-          _findByTitle(seriesData, 'The Summer I Turned Pretty'),
-        ],
+        items: recommendations,
+        isLoading: _isLoading,
+        errorMessage: _allCategoriesFailed
+            ? 'Data rekomendasi tidak tersedia karena API gagal.'
+            : null,
       ),
-      _HomeSection(
-        title: 'Series Terbaru',
-        items: sortedByNewest(seriesData).take(_newestLimit).toList(),
-        listType: 'Series',
-        total: seriesData.length,
+      _section(
+        'Series Terbaru',
+        _newestFirst(series).take(_newestLimit).toList(),
+        'Series',
       ),
-      _HomeSection(
-        title: 'Series Unggulan',
-        items: seriesData.take(5).toList(),
-        listType: 'Series',
-        total: seriesData.length,
+      _section('Series Unggulan', series.take(5).toList(), 'Series'),
+      _section('Film Populer', movies.take(_popularLimit).toList(), 'Film'),
+      _section(
+        'Film Terbaru',
+        _newestFirst(movies).take(_newestLimit).toList(),
+        'Film',
       ),
-      _HomeSection(
-        title: 'Film Populer',
-        items: movieData.take(_popularLimit).toList(),
-        listType: 'Film',
-        total: movieData.length,
+      _section('Anime Terpopuler', anime.take(_popularLimit).toList(), 'Anime'),
+      _section(
+        'Anime Terbaru',
+        _newestFirst(anime).take(_newestLimit).toList(),
+        'Anime',
       ),
-      _HomeSection(
-        title: 'Film Terbaru',
-        items: sortedByNewest(movieData).take(_newestLimit).toList(),
-        listType: 'Film',
-        total: movieData.length,
+      _section(
+        'J-Drama Terpopuler',
+        jdrama.take(_popularLimit).toList(),
+        'J-Drama',
       ),
-      _HomeSection(
-        title: 'Anime Terpopuler',
-        items: animeData.take(_popularLimit).toList(),
-        listType: 'Anime',
-        total: animeData.length,
+      _section(
+        'J-Drama Terbaru',
+        _newestFirst(jdrama).take(_newestLimit).toList(),
+        'J-Drama',
       ),
-      _HomeSection(
-        title: 'Anime Terbaru',
-        items: sortedByNewest(animeData).take(_newestLimit).toList(),
-        listType: 'Anime',
-        total: animeData.length,
+      _section(
+        'K-Drama Terpopuler',
+        kdrama.take(_popularLimit).toList(),
+        'K-Drama',
       ),
-
-      _HomeSection(
-        title: 'J-Drama Terpopuler',
-        items: (_jdramaPopular ?? jdramaData).take(_popularLimit).toList(),
-        listType: 'J-Drama',
-      ),
-      _HomeSection(
-        title: 'J-Drama Terbaru',
-        items: (_jdramaNewest ?? sortedByNewest(jdramaData))
-            .take(_newestLimit)
-            .toList(),
-        listType: 'J-Drama',
-      ),
-      _HomeSection(
-        title: 'K-Drama Terpopuler',
-        items: (_kdramaPopular ?? kdramaData).take(_popularLimit).toList(),
-        listType: 'K-Drama',
-      ),
-      _HomeSection(
-        title: 'K-Drama Terbaru',
-        items: (_kdramaNewest ?? sortedByNewest(kdramaData))
-            .take(_newestLimit)
-            .toList(),
-        listType: 'K-Drama',
+      _section(
+        'K-Drama Terbaru',
+        _newestFirst(kdrama).take(_newestLimit).toList(),
+        'K-Drama',
       ),
     ];
   }
 
-  /// Mengambil satu judul dari list berdasarkan nama (tidak peka huruf besar/kecil).
-  MediaModel _findByTitle(List<MediaModel> list, String title) {
-    return list.firstWhere((m) => m.title.toLowerCase() == title.toLowerCase());
+  _HomeSection _section(String title, List<MediaModel> items, String type) {
+    return _HomeSection(
+      title: title,
+      items: items,
+      listType: type,
+      total: (_homeData[type] ?? []).length,
+      isLoading: _isLoading,
+      errorMessage: _homeErrors[type],
+    );
   }
 
-  GlobalKey _keyFor(String title) {
-    return _sectionKeys.putIfAbsent(title, () => GlobalKey());
-  }
+  bool get _allCategoriesFailed =>
+      !_isLoading && _homeData.values.every((items) => items.isEmpty);
 
-  // ============================================================
-  // HERO: DAFTAR ITEM + AUTO SLIDE
-  // ============================================================
+  GlobalKey _keyFor(String title) =>
+      _sectionKeys.putIfAbsent(title, () => GlobalKey());
 
-  /// Pilihan hero: gabungan yang terbaru dan yang teratas dari tiap kategori,
-  /// tanpa judul ganda, hanya yang punya poster.
   List<MediaModel> _buildHeroItems() {
     final candidates = <MediaModel>[
-      if (movieData.isNotEmpty) sortedByNewest(movieData).first,
-      if (seriesData.isNotEmpty) sortedByNewest(seriesData).first,
-      if (animeData.isNotEmpty) sortedByNewest(animeData).first,
-      if (movieData.isNotEmpty) movieData.first,
-      if (seriesData.isNotEmpty) seriesData.first,
-      if (animeData.isNotEmpty) animeData.first,
-      if (movieData.length > 1) movieData[1],
-      if (seriesData.length > 1) seriesData[1],
+      ..._newestFirst(_homeData['Film'] ?? []),
+      ..._newestFirst(_homeData['Series'] ?? []),
+      ..._newestFirst(_homeData['Anime'] ?? []),
+      ..._newestFirst(_homeData['J-Drama'] ?? []),
+      ..._newestFirst(_homeData['K-Drama'] ?? []),
     ];
-
     final seen = <String>{};
     final result = <MediaModel>[];
-
     for (final item in candidates) {
       if (item.imageUrl.isEmpty) continue;
-      if (!seen.add(item.title.toLowerCase())) continue;
+      final key = '${item.mediaType}:${item.externalId ?? item.title}'
+          .toLowerCase();
+      if (!seen.add(key)) continue;
       result.add(item);
       if (result.length >= _heroCount) break;
     }
-
     return result;
   }
 
   void _startHeroTimer() {
     _heroTimer?.cancel();
     if (_heroItems.length < 2) return;
-
     _heroTimer = Timer.periodic(_heroInterval, (_) {
       if (!mounted || !_heroController.hasClients) return;
       _goToHero((_heroIndex + 1) % _heroItems.length, restartTimer: false);
@@ -281,49 +309,34 @@ class _HomePageState extends State<HomePage> {
 
   void _goToHero(int index, {bool restartTimer = true}) {
     if (!_heroController.hasClients) return;
-
     _heroController.animateToPage(
       index,
       duration: const Duration(milliseconds: 550),
       curve: Curves.easeInOutCubic,
     );
-
     if (restartTimer) _startHeroTimer();
   }
 
-  // ============================================================
-  // SCROLL: HEADER + SECTION AKTIF
-  // ============================================================
-
-  double _headerTotal() {
-    return MediaQuery.of(context).padding.top + _headerHeight;
-  }
+  double _headerTotal() => MediaQuery.of(context).padding.top + _headerHeight;
 
   void _onScroll() {
     if (!mounted) return;
-
-    // Header makin solid setelah di-scroll sedikit.
     if (_scrollController.hasClients) {
       _headerOpacity.value = (_scrollController.offset / 140).clamp(0.0, 1.0);
     }
-
     _updateActiveSection();
   }
 
   void _scrollToSection(String title) {
     final ctx = _sectionKeys[title]?.currentContext;
     if (ctx == null || !_scrollController.hasClients) return;
-
     final box = ctx.findRenderObject() as RenderBox?;
     if (box == null || !box.attached) return;
-
     final sectionTop = box.localToGlobal(Offset.zero).dy;
     final target = (_scrollController.offset + sectionTop - _headerTotal() - 16)
         .clamp(0.0, _scrollController.position.maxScrollExtent)
         .toDouble();
-
     setState(() => _activeSection = title);
-
     _scrollController.animateTo(
       target,
       duration: const Duration(milliseconds: 650),
@@ -333,7 +346,6 @@ class _HomePageState extends State<HomePage> {
 
   void _scrollToTop() {
     if (!_scrollController.hasClients) return;
-
     _scrollController.animateTo(
       0,
       duration: const Duration(milliseconds: 650),
@@ -341,26 +353,17 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Section yang judulnya sudah lewat di bawah header dianggap aktif.
   void _updateActiveSection() {
     final line = _headerTotal() + 40;
     String current = '';
-
     for (final title in _navTitles) {
       final ctx = _sectionKeys[title]?.currentContext;
       if (ctx == null) continue;
-
       final box = ctx.findRenderObject() as RenderBox?;
       if (box == null || !box.attached) continue;
-
-      if (box.localToGlobal(Offset.zero).dy <= line) {
-        current = title;
-      }
+      if (box.localToGlobal(Offset.zero).dy <= line) current = title;
     }
-
-    if (current != _activeSection) {
-      setState(() => _activeSection = current);
-    }
+    if (current != _activeSection) setState(() => _activeSection = current);
   }
 
   void _openList(String type) {
@@ -377,32 +380,26 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ============================================================
-  // BUILD
-  // ============================================================
-
   @override
   Widget build(BuildContext context) {
     final sections = _buildSections();
-
     return Scaffold(
       backgroundColor: backgroundColor,
       body: Stack(
         children: [
-          // ======================================================
-          // ISI HALAMAN
-          // ======================================================
           SingleChildScrollView(
             controller: _scrollController,
             padding: const EdgeInsets.only(bottom: 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Hero memanjang penuh dan berada di belakang header.
                 if (_heroItems.isNotEmpty) _buildHero(),
-
+                if (_heroItems.isEmpty && _isLoading)
+                  SizedBox(
+                    height: _headerTotal() + 300,
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
                 const SizedBox(height: 26),
-
                 Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1400),
@@ -425,17 +422,12 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-
-          // ======================================================
-          // HEADER (NAVBAR)
-          // ======================================================
           Positioned(top: 0, left: 0, right: 0, child: _buildHeader()),
         ],
       ),
     );
   }
 
-  // ============================================================
   // HERO
   // ============================================================
 
@@ -578,10 +570,7 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 8),
           Text(
             meta,
-            style: const TextStyle(
-              color: AppColors.softText,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: AppColors.softText, fontSize: 14),
           ),
         ],
         if (wide && overview.isNotEmpty) ...[
@@ -917,6 +906,34 @@ class _HomePageState extends State<HomePage> {
     final items = section.items;
     final hasSeeAll = section.listType != null;
 
+    if (items.isEmpty) {
+      return SizedBox(
+        height: section.featured ? 170 : 130,
+        child: Center(
+          child: section.isLoading
+              ? const CircularProgressIndicator()
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        section.errorMessage ?? 'Data belum tersedia.',
+                        style: const TextStyle(color: mutedText),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    TextButton.icon(
+                      onPressed: _loadHomeData,
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('Coba lagi'),
+                    ),
+                  ],
+                ),
+        ),
+      );
+    }
+
     return SizedBox(
       height: section.featured ? 340 : 262,
       child: ListView.builder(
@@ -924,10 +941,7 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         itemCount: items.length + (hasSeeAll ? 1 : 0),
         itemBuilder: (context, index) {
-          if (index == items.length) {
-            return _buildSeeAllCard(section);
-          }
-
+          if (index == items.length) return _buildSeeAllCard(section);
           return _buildMediaCard(items[index], featured: section.featured);
         },
       ),
@@ -1067,7 +1081,7 @@ class _TypeChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: small ? const Color(0x33FFFFFF) : AppColors.lightBlue,
-                  ),
+        ),
       ),
       child: Text(
         label,

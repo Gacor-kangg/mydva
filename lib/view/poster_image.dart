@@ -57,39 +57,29 @@ class PosterImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final src = media.imageUrl;
-    if (src.isEmpty) return _placeholder();
+    final src = media.imageUrl.trim();
 
-    final Widget image;
-
-    if (src.startsWith('http')) {
-      image = Image.network(
-        src,
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        frameBuilder: _fadeIn,
-        // Di web, CDN tanpa header CORS (mis. Kitsu) gagal dimuat sebagai
-        // canvas; mode ini otomatis jatuh ke elemen <img> biasa.
-        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
-        errorBuilder: (context, error, stackTrace) => _placeholder(),
-      );
-    } else {
-      image = Image.asset(
-        src,
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        frameBuilder: _fadeIn,
-        errorBuilder: (context, error, stackTrace) => _placeholder(),
-      );
+    // Hanya menerima poster dari URL API.
+    if (!src.startsWith('https://') && !src.startsWith('http://')) {
+      return _placeholder();
     }
 
     return Container(
       width: width,
       height: height,
       color: placeholderColor,
-      child: image,
+      child: Image.network(
+        src,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        frameBuilder: _fadeIn,
+        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('Gagal memuat poster ${media.title}: $error');
+          return _placeholder();
+        },
+      ),
     );
   }
 }

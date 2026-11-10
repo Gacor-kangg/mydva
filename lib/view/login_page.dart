@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../controllers/auth_controller.dart';
+import '../repositories/auth_repository.dart';
+import '../services/auth_service.dart';
+
 import 'about_application_page.dart';
 import 'app_colors.dart';
 import 'home_page.dart';
@@ -28,6 +32,7 @@ class _LoginPageState extends State<LoginPage>
 
   late final AnimationController _wallController;
   late final MediaRepository _mediaRepository;
+  late final AuthController _authController;
 
   List<List<MediaModel>> _wallColumns = [[], [], []];
 
@@ -70,6 +75,10 @@ class _LoginPageState extends State<LoginPage>
       vsync: this,
       duration: const Duration(seconds: 80),
     )..repeat();
+
+    _authController = AuthController(
+      repository: AuthRepository(service: AuthService()),
+    );
 
     _mediaRepository = MediaRepository(
       tmdbService: TmdbService(),
@@ -233,30 +242,45 @@ class _LoginPageState extends State<LoginPage>
   }
 
   // ----------------------------------------------------------
-  // TODO (Firebase): tiga fungsi di bawah ini adalah tempat
-  // menyambungkan autentikasi sungguhan. Sekarang masih contoh:
-  // selalu berhasil setelah jeda singkat. Kembalikan teks error
-  // (misalnya 'Email atau password salah') jika gagal, atau null
-  // jika berhasil.
+  // FIREBASE AUTHENTICATION
   // ----------------------------------------------------------
 
-  Future<String?> _authenticate(String id, String password) async {
-    await Future.delayed(const Duration(milliseconds: 900));
-    return null;
+  Future<String?> _authenticate(String email, String password) {
+    return _authController.signIn(email: email, password: password);
   }
 
   Future<String?> _registerAccount(
     String username,
     String email,
     String password,
-  ) async {
-    await Future.delayed(const Duration(milliseconds: 900));
-    return null;
+  ) {
+    return _authController.register(
+      username: username,
+      email: email,
+      password: password,
+    );
   }
 
-  Future<String?> _sendResetLink(String email) async {
-    await Future.delayed(const Duration(milliseconds: 900));
-    return null;
+  Future<String?> _sendResetLink(String email) {
+    return _authController.sendPasswordResetEmail(email);
+  }
+
+  Future<void> _submitGoogleLogin() async {
+    setState(() {
+      _errors.clear();
+      _notice = null;
+      _loading = true;
+    });
+
+    final error = await _authController.signInWithGoogle();
+    if (!mounted) return;
+
+    if (error != null) {
+      setState(() {
+        _loading = false;
+        _notice = error;
+      });
+    }
   }
 
   Future<void> _submitLogin() async {
@@ -264,7 +288,7 @@ class _LoginPageState extends State<LoginPage>
     final pass = _loginPass.text;
 
     final errors = <String, String>{};
-    if (id.isEmpty) errors['loginId'] = 'Masukkan username atau email';
+    if (id.isEmpty) errors['loginId'] = 'Masukkan email';
     if (pass.isEmpty) errors['loginPass'] = 'Masukkan password';
 
     if (errors.isNotEmpty) {
@@ -293,10 +317,8 @@ class _LoginPageState extends State<LoginPage>
       return;
     }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomePage()),
-    );
+    // AuthGate akan berpindah ke HomePage saat Firebase mengubah status login.
+
   }
 
   Future<void> _submitRegister() async {
@@ -789,7 +811,7 @@ class _LoginPageState extends State<LoginPage>
         ),
         _noticeBox(),
         _AuthField(
-          label: 'Username atau email',
+          label: 'Email',
           controller: _loginId,
           error: _errors['loginId'],
           textInputAction: TextInputAction.next,
@@ -825,6 +847,23 @@ class _LoginPageState extends State<LoginPage>
           label: 'Masuk',
           loading: _loading,
           onPressed: _submitLogin,
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _loading ? null : _submitGoogleLogin,
+            icon: const Icon(Icons.g_mobiledata, size: 26),
+            label: const Text('Lanjutkan dengan Google'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: BorderSide(color: Colors.white.withOpacity(0.24)),
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         _footer(

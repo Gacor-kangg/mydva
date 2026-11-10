@@ -1,16 +1,22 @@
+
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-import 'view/login_page.dart';
+import 'firebase_options.dart';
+import 'view/auth_gate.dart';
 import 'view/ui_effects.dart';
-
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env");
+  await dotenv.load(fileName: '.env');
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(const MyApp());
 }
@@ -36,7 +42,6 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.light,
         useMaterial3: true,
-
         pageTransitionsTheme: PageTransitionsTheme(
           builders: {
             for (final platform in TargetPlatform.values)
@@ -45,7 +50,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      home: const LoginPage(),
+      home: AuthGate(),
     );
   }
 }
