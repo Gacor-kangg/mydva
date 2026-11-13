@@ -29,6 +29,7 @@ class MediaController extends ChangeNotifier {
   String _selectedSort = 'Popular';
 
   int _requestId = 0;
+  bool _resultsFromApiSearch = false;
   Timer? _searchDebounce;
 
   List<MediaModel> get mediaList => List.unmodifiable(_mediaList);
@@ -48,8 +49,11 @@ class MediaController extends ChangeNotifier {
   List<MediaModel> get filteredMedia {
     final query = _searchQuery.toLowerCase();
 
+    final skipTitleFilter = _resultsFromApiSearch &&
+        (_selectedType == 'Film' || _selectedType == 'Series');
+
     final result = _mediaList.where((media) {
-      return media.title.toLowerCase().contains(query);
+      return skipTitleFilter || media.title.toLowerCase().contains(query);
     }).toList();
 
     switch (_selectedSort) {
@@ -90,6 +94,7 @@ class MediaController extends ChangeNotifier {
     }
 
     _selectedType = type;
+    _resultsFromApiSearch = false;
 
     final currentRequest = ++_requestId;
 
@@ -161,11 +166,6 @@ class MediaController extends ChangeNotifier {
       return;
     }
 
-    // Film dan Series sementara tetap difilter dari data yang sudah dimuat.
-    if (_selectedType == 'Film' || _selectedType == 'Series') {
-      return;
-    }
-
     _searchDebounce = Timer(
       const Duration(milliseconds: 500),
       () => _searchMediaFromApi(_searchQuery),
@@ -185,6 +185,14 @@ class MediaController extends ChangeNotifier {
       late final List<MediaModel> result;
 
       switch (_selectedType) {
+        case 'Film':
+          result = await _repository.searchMovies(keyword);
+          break;
+
+        case 'Series':
+          result = await _repository.searchSeries(keyword);
+          break;
+
         case 'Anime':
           result = await _repository.searchAnime(keyword);
           break;
@@ -204,6 +212,7 @@ class MediaController extends ChangeNotifier {
       if (currentRequest != _requestId) return;
 
       _mediaList = result;
+      _resultsFromApiSearch = true;
     } on ApiException catch (error) {
       if (currentRequest != _requestId) return;
 

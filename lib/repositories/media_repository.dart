@@ -135,6 +135,18 @@ class MediaRepository {
   }
 
   // =========================
+  // SEARCH FILM & SERIES - TMDB
+  // =========================
+
+  Future<List<MediaModel>> searchMovies(String keyword) {
+    return _tmdbService.searchMovies(keyword);
+  }
+
+  Future<List<MediaModel>> searchSeries(String keyword) {
+    return _tmdbService.searchSeries(keyword);
+  }
+
+  // =========================
   // SEARCH ANIME
   // =========================
 
