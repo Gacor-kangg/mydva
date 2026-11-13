@@ -4,6 +4,7 @@ import '../models/media_detail_model.dart';
 import '../models/media_model.dart';
 import 'api_client.dart';
 import 'api_exception.dart';
+import 'translation_service.dart';
 
 /// Detail API terpisah dari model katalog. TMDB menangani seluruh kategori
 /// non-anime; AniList menangani detail dan karakter anime.
@@ -11,8 +12,9 @@ class MediaDetailService {
   final Dio _tmdb;
   final Dio _anilist;
   final Dio _kitsu;
+  final TranslationService _translation;
 
-  MediaDetailService({Dio? tmdb, Dio? anilist})
+  MediaDetailService({Dio? tmdb, Dio? anilist, Dio? kitsu, TranslationService? translation})
       : _tmdb = tmdb ?? ApiClient.create(
           baseUrl: ApiConfig.tmdbBaseUrl,
           headers: {
@@ -25,10 +27,11 @@ class MediaDetailService {
           baseUrl: ApiConfig.anilistUrl,
           headers: {'Accept': 'application/json'},
         ),
-        _kitsu = ApiClient.create(
+        _kitsu = kitsu ?? ApiClient.create(
           baseUrl: ApiConfig.kitsuBaseUrl,
           headers: {'Accept': 'application/vnd.api+json'},
-        );
+        ),
+        _translation = translation ?? TranslationService();
 
   Future<MediaDetailModel> getDetail(MediaModel media) async {
     if (media.mediaType == 'Anime') {
@@ -169,7 +172,9 @@ class MediaDetailService {
         if (tags.isNotEmpty) 'Themes': tags.whereType<Map<String, dynamic>>().where((t) => (t['rank'] as num? ?? 0) >= 50).map((t) => t['name'].toString()).join(', '),
         if (studios.isNotEmpty) 'Studios': studios.whereType<Map<String, dynamic>>().map((s) => s['name'].toString()).join(', '),
       };
-      return MediaDetailModel(synopsis: data['description']?.toString(), information: info, cast: cast);
+      final originalSynopsis = data['description']?.toString();
+      final synopsis = await _translateSynopsis(originalSynopsis);
+      return MediaDetailModel(synopsis: synopsis, information: info, cast: cast);
     } on DioException catch (e) {
       throw ApiException.fromDio(e, source: 'AniList');
     }
@@ -190,11 +195,31 @@ class MediaDetailService {
         if (a['episodeLength'] != null) 'Duration': '${a['episodeLength']} min per ep.',
         if (a['ageRating'] != null) 'Rating': '${a['ageRating']} ${a['ageRatingGuide'] ?? ''}'.trim(),
       };
-      return MediaDetailModel(synopsis: a['synopsis']?.toString(), information: info);
+      final originalSynopsis = a['synopsis']?.toString();
+      final synopsis = await _translateSynopsis(originalSynopsis);
+      return MediaDetailModel(synopsis: synopsis, information: info);
     } on DioException catch (e) {
       throw ApiException.fromDio(e, source: 'Kitsu');
     }
   }
 
-  void dispose() { _tmdb.close(); _anilist.close(); _kitsu.close(); }
+  /// Terjemahkan sinopsis anime ke Bahasa Indonesia.
+  /// Jika penerjemahan gagal, pertahankan teks asli agar sinopsis tetap tampil.
+  Future<String?> _translateSynopsis(String? synopsis) async {
+    final original = synopsis?.trim();
+    if (original == null || original.isEmpty) return synopsis;
+
+    try {
+      return await _translation.toIndonesian(original);
+    } catch (_) {
+      return original;
+    }
+  }
+
+  void dispose() {
+    _tmdb.close();
+    _anilist.close();
+    _kitsu.close();
+    _translation.dispose();
+  }
 }
