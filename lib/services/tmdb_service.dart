@@ -31,10 +31,6 @@ class TmdbService {
   static const String _genreDrama = '18';
   static const String _genreAnimation = '16';
 
-  // =========================
-  // FILM & SERIES
-  // =========================
-
   Future<List<MediaModel>> getPopularMovies({int page = 1}) {
     return _getList(
       endpoint: '/movie/popular',
@@ -48,6 +44,41 @@ class TmdbService {
       endpoint: '/tv/popular',
       mediaType: 'Series',
       parameters: {'page': page.toString()},
+    );
+  }
+
+  Future<List<MediaModel>> searchMovies(String keyword, {int page = 1}) {
+    return _searchByKeyword(
+      endpoint: '/search/movie',
+      mediaType: 'Film',
+      keyword: keyword,
+      page: page,
+    );
+  }
+
+  Future<List<MediaModel>> searchSeries(String keyword, {int page = 1}) {
+    return _searchByKeyword(
+      endpoint: '/search/tv',
+      mediaType: 'Series',
+      keyword: keyword,
+      page: page,
+    );
+  }
+
+  Future<List<MediaModel>> _searchByKeyword({
+    required String endpoint,
+    required String mediaType,
+    required String keyword,
+    required int page,
+  }) async {
+    final query = keyword.trim();
+    if (query.isEmpty) return [];
+
+    return _getList(
+      endpoint: endpoint,
+      mediaType: mediaType,
+      parameters: {'query': query, 'page': page.toString()},
+      onlyWithPoster: true,
     );
   }
 

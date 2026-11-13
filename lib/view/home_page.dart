@@ -13,6 +13,7 @@ import '../services/kitsu_service.dart';
 import '../services/tmdb_service.dart';
 import 'poster_image.dart';
 import 'profile_page.dart';
+import 'skeletons.dart';
 import 'ui_effects.dart';
 
 class _HomeSection {
@@ -906,6 +907,10 @@ class _HomePageState extends State<HomePage> {
     final items = section.items;
     final hasSeeAll = section.listType != null;
 
+    if (items.isEmpty && section.isLoading) {
+      return PosterRowSkeleton(featured: section.featured);
+    }
+
     if (items.isEmpty) {
       return SizedBox(
         height: section.featured ? 170 : 130,
@@ -1058,11 +1063,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// ==============================================================
-// KOMPONEN KECIL
-// ==============================================================
 
-/// Label tipe (Film / Series / Anime).
 class _TypeChip extends StatelessWidget {
   final String label;
   final bool small;

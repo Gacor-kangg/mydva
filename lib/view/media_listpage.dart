@@ -7,6 +7,7 @@ import 'poster_image.dart';
 import '../repositories/media_repository.dart';
 import '../services/anilist_service.dart';
 import '../services/tmdb_service.dart';
+import 'skeletons.dart';
 import 'ui_effects.dart';
 import '../services/kitsu_service.dart';
 
@@ -205,9 +206,7 @@ class _MediaListPageState extends State<MediaListPage> {
   Widget _buildMediaContent(List<MediaModel> mediaList) {
     // LOADING
     if (_controller.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF9DBEFF)),
-      );
+      return const MediaListSkeleton();
     }
 
     // ERROR
