@@ -41,6 +41,12 @@ class AnilistService {
             description(asHtml: false)
             genres
             averageScore
+            stats {
+              scoreDistribution {
+                score
+                amount
+              }
+            }
             episodes
             format
             startDate {

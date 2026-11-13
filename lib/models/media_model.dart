@@ -34,6 +34,35 @@ class MediaModel {
     this.source = 'TMDB',
   });
 
+  /// Kunci unik dan stabil untuk menyimpan judul ini di database.
+  ///
+  /// Format: {sumber}_{jenis}_{externalId}, contoh tmdb_movie_550 atau
+  /// anilist_anime_21. Jenis dipisah (movie/tv/anime) karena id TMDB untuk
+  /// film dan serial bisa sama. Aman dipakai sebagai ID dokumen Firestore.
+  String get mediaKey {
+    final src = source.toLowerCase();
+    final kind = mediaType == 'Film'
+        ? 'movie'
+        : mediaType == 'Anime'
+        ? 'anime'
+        : 'tv';
+
+    final id = (externalId != null && externalId!.isNotEmpty)
+        ? externalId!
+        : _slug('$title ${releaseYear ?? ''}');
+
+    return '${src}_${kind}_$id';
+  }
+
+  static String _slug(String input) {
+    var slug = input
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '');
+    if (slug.length > 80) slug = slug.substring(0, 80);
+    return slug.isEmpty ? 'unknown' : slug;
+  }
+
   String getDisplayTitle() {
     if (releaseYear != null) {
       return '$title ($releaseYear)';
@@ -112,6 +141,7 @@ class MediaModel {
       rating: rawRating is num ? rawRating.toDouble() : null,
       ratingScale: 100,
       ratingSource: 'AniList',
+      voteCount: _parseAniListVoteCount(json['stats']),
       genres: rawGenres is List
           ? rawGenres.map((item) => item.toString()).toList()
           : const [],
@@ -159,6 +189,7 @@ class MediaModel {
           : null,
       ratingScale: 100,
       ratingSource: 'Kitsu',
+      voteCount: _parseKitsuVoteCount(attributes['ratingFrequencies']),
       genres: rawGenres is List
           ? rawGenres
                 .map((item) {
@@ -234,5 +265,33 @@ class MediaModel {
         : rating!.toStringAsFixed(1);
 
     return '$value/${ratingScale ?? 10}';
+  }
+
+  static int _parseAniListVoteCount(dynamic stats) {
+    if (stats is! Map<String, dynamic>) return 0;
+
+    final distribution = stats['scoreDistribution'];
+
+    if (distribution is! List) return 0;
+
+    return distribution.fold<int>(0, (total, item) {
+      if (item is! Map<String, dynamic>) return total;
+
+      final amount = item['amount'];
+
+      return total + (amount is num ? amount.toInt() : 0);
+    });
+  }
+
+  static int _parseKitsuVoteCount(dynamic frequencies) {
+    if (frequencies is! Map) return 0;
+
+    return frequencies.values.fold<int>(0, (total, value) {
+      final count = value is num
+          ? value.toInt()
+          : int.tryParse(value.toString()) ?? 0;
+
+      return total + count;
+    });
   }
 }

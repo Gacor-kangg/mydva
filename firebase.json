@@ -1,1 +1,17 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"mydva-923b9","configurations":{"web":"1:916953063146:web:83dc2f4b5df6201e030193"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "mydva-923b9",
+          "configurations": {
+            "web": "1:916953063146:web:83dc2f4b5df6201e030193"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

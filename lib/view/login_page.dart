@@ -6,7 +6,6 @@ import '../services/auth_service.dart';
 
 import 'about_application_page.dart';
 import 'app_colors.dart';
-import 'home_page.dart';
 import '../models/media_model.dart';
 import 'poster_image.dart';
 import 'ui_effects.dart';
