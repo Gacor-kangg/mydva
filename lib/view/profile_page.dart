@@ -13,6 +13,7 @@ import 'ui_effects.dart';
 import 'about_application_page.dart';
 import 'settings_page.dart';
 import 'my_list_history_page.dart';
+import 'score_distribution_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -632,7 +633,11 @@ class _ProfilePageState extends State<ProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader('Statistics', 'All Media Stats'),
+        _sectionHeader(
+          'Statistics',
+          'All Media Stats',
+          onTap: () => _openScoreDistribution(context),
+        ),
         const SizedBox(height: 14),
 
         LayoutBuilder(
@@ -673,6 +678,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
         _buildRecentActivity(context),
       ],
+    );
+  }
+
+  void _openScoreDistribution(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ScoreDistributionPage()),
     );
   }
 
