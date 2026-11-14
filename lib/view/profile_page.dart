@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/my_list_entry.dart';
 import '../services/my_list_service.dart';
@@ -332,8 +333,15 @@ class _ProfilePageState extends State<ProfilePage> {
     final avatar = ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: (_profile['photoUrl'] ?? _user?.photoURL) is String && ((_profile['photoUrl'] ?? _user?.photoURL) as String).isNotEmpty
-          ? Image.network((_profile['photoUrl'] ?? _user!.photoURL!) as String, width: 120, height: 120, fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => _avatarFallback())
+          ? CachedNetworkImage(
+              imageUrl: (_profile['photoUrl'] ?? _user!.photoURL!) as String,
+              width: 120,
+              height: 120,
+              fit: BoxFit.cover,
+              fadeInDuration: const Duration(milliseconds: 350),
+              placeholder: (context, url) => _avatarFallback(),
+              errorWidget: (context, url, error) => _avatarFallback(),
+            )
           : _avatarFallback(),
     );
 
@@ -928,12 +936,14 @@ class _ProfilePageState extends State<ProfilePage> {
     final src = imageUrl.trim();
     final image = src.isEmpty
         ? initial()
-        : Image.network(
-            src,
+        : CachedNetworkImage(
+            imageUrl: src,
             width: w,
             height: h,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => initial(),
+            fadeInDuration: const Duration(milliseconds: 350),
+            placeholder: (context, url) => initial(),
+            errorWidget: (context, url, error) => initial(),
           );
 
     return ClipRRect(borderRadius: BorderRadius.circular(4), child: image);

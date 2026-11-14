@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../models/my_list_entry.dart';
 import '../services/my_list_service.dart';
@@ -105,23 +106,53 @@ class _MyListHistoryPageState extends State<MyListHistoryPage> {
   }
 
   int _compare(MyListEntry a, MyListEntry b) {
-    final int result;
+    int result = 0;
 
     switch (_sort) {
       case _SortOption.newest:
-        result = _compareDates(a.addedAt, b.addedAt, newestFirst: true);
+        result = _compareDates(
+          a.addedAt,
+          b.addedAt,
+          newestFirst: true,
+        );
+        break;
+
       case _SortOption.oldest:
-        result = _compareDates(a.addedAt, b.addedAt, newestFirst: false);
+        result = _compareDates(
+          a.addedAt,
+          b.addedAt,
+          newestFirst: false,
+        );
+        break;
+
       case _SortOption.titleAz:
-        result = 0;
+        result = a.title.toLowerCase().compareTo(
+          b.title.toLowerCase(),
+        );
+        break;
+
       case _SortOption.ratingHigh:
-        result = _compareScores(a.score, b.score, highFirst: true);
+        result = _compareScores(
+          a.score,
+          b.score,
+          highFirst: true,
+        );
+        break;
+
       case _SortOption.ratingLow:
-        result = _compareScores(a.score, b.score, highFirst: false);
+        result = _compareScores(
+          a.score,
+          b.score,
+          highFirst: false,
+        );
+        break;
     }
 
     if (result != 0) return result;
-    return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+
+    return a.title.toLowerCase().compareTo(
+      b.title.toLowerCase(),
+    );
   }
 
   int _compareDates(DateTime? a, DateTime? b, {required bool newestFirst}) {
@@ -648,12 +679,17 @@ class _MyListHistoryPageState extends State<MyListHistoryPage> {
                     alignment: Alignment.center,
                     child: const Icon(Icons.movie, color: _muted),
                   )
-                : Image.network(
-                    entry.imageUrl,
+                : CachedNetworkImage(
+                    imageUrl: entry.imageUrl,
                     width: 64,
                     height: 90,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    placeholder: (context, url) => Container(
+                      width: 64,
+                      height: 90,
+                      color: _border,
+                    ),
+                    errorWidget: (context, url, error) => Container(
                       width: 64,
                       height: 90,
                       color: _border,
@@ -661,7 +697,8 @@ class _MyListHistoryPageState extends State<MyListHistoryPage> {
                       child: const Icon(Icons.broken_image, color: _muted),
                     ),
                   ),
-          ),
+                ),
+
           const SizedBox(width: 14),
           Expanded(
             child: Column(

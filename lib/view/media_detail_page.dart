@@ -1,4 +1,5 @@
   import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
   import 'package:firebase_auth/firebase_auth.dart';
   import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -1089,7 +1090,12 @@
       return ClipRRect(borderRadius: BorderRadius.circular(6), child: SizedBox(
         width: 48, height: 58,
         child: url != null && url.isNotEmpty
-            ? Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _avatar(name, size: 48))
+            ? CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => _avatar(name, size: 48),
+                errorWidget: (context, url, error) => _avatar(name, size: 48),
+              )
             : _avatar(name, size: 48),
       ));
     }

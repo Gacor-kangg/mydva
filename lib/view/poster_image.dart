@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../models/media_model.dart';
 
@@ -39,21 +40,6 @@ class PosterImage extends StatelessWidget {
     );
   }
 
-  Widget _fadeIn(
-    BuildContext context,
-    Widget child,
-    int? frame,
-    bool wasSynchronouslyLoaded,
-  ) {
-    if (wasSynchronouslyLoaded) return child;
-
-    return AnimatedOpacity(
-      opacity: frame == null ? 0 : 1,
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeOut,
-      child: child,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,14 +54,14 @@ class PosterImage extends StatelessWidget {
       width: width,
       height: height,
       color: placeholderColor,
-      child: Image.network(
-        src,
+      child: CachedNetworkImage(
+        imageUrl: src,
         width: width,
         height: height,
         fit: BoxFit.cover,
-        frameBuilder: _fadeIn,
-        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
-        errorBuilder: (context, error, stackTrace) {
+        fadeInDuration: const Duration(milliseconds: 450),
+        placeholder: (context, url) => _placeholder(),
+        errorWidget: (context, url, error) {
           debugPrint('Gagal memuat poster ${media.title}: $error');
           return _placeholder();
         },

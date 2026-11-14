@@ -1,11 +1,11 @@
 {
-    "name": "flutterproject",
-    "short_name": "flutterproject",
+    "name": "MYDVA",
+    "short_name": "MYDVA",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "MYDVA is a mobile application that provides users with access to various services and information related to the Department of Veterans Affairs. It offers features such as appointment scheduling, benefits information, and secure messaging with VA representatives.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

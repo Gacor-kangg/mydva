@@ -1,6 +1,7 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../services/user_service.dart';
@@ -123,8 +124,29 @@ class _SettingsPageState extends State<SettingsPage> {
     body: _loading ? const Center(child: CircularProgressIndicator()) : Center(
       child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 760), child: ListView(padding: const EdgeInsets.all(20), children: [
         _section('PROFILE PHOTO', Column(children: [
-          CircleAvatar(radius: 52, backgroundColor: const Color(0xFF202024), backgroundImage: _photoUrl != null && _photoUrl!.isNotEmpty ? NetworkImage(_photoUrl!) : null,
-            child: _photoUrl == null || _photoUrl!.isEmpty ? const Icon(Icons.person, color: Colors.white, size: 48) : null),
+          ClipOval(
+            child: SizedBox(
+              width: 104,
+              height: 104,
+              child: _photoUrl != null && _photoUrl!.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: _photoUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const ColoredBox(
+                        color: Color(0xFF202024),
+                        child: Icon(Icons.person, color: Colors.white, size: 48),
+                      ),
+                      errorWidget: (context, url, error) => const ColoredBox(
+                        color: Color(0xFF202024),
+                        child: Icon(Icons.person, color: Colors.white, size: 48),
+                      ),
+                    )
+                  : const ColoredBox(
+                      color: Color(0xFF202024),
+                      child: Icon(Icons.person, color: Colors.white, size: 48),
+                    ),
+            ),
+          ),
           const SizedBox(height: 14), Wrap(spacing: 10, children: [
             OutlinedButton.icon(onPressed: _saving ? null : _pickPhoto, icon: const Icon(Icons.add_a_photo_outlined), label: const Text('Tambah / Ganti foto')),
             TextButton.icon(onPressed: _saving || _photoUrl == null ? null : _removePhoto, icon: const Icon(Icons.delete_outline), label: const Text('Hapus foto')),
