@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'MYDVAN',
+      title: 'MYDVA',
 
       scrollBehavior: const MaterialScrollBehavior().copyWith(
         dragDevices: {

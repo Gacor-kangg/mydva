@@ -156,7 +156,7 @@ class AboutApplicationPage extends StatelessWidget {
             ),
             child: ClipOval(
               child: Image.asset(
-                'assets/pnp.jpg',
+                'assets/logo.png',
                 width: 84,
                 height: 84,
                 fit: BoxFit.cover,
