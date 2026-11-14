@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/my_list_entry.dart';
+import '../services/my_list_service.dart';
+import '../services/user_service.dart';
 
 import '../services/auth_service.dart';
 
@@ -9,9 +13,16 @@ import 'media_listpage.dart';
 import '../models/media_model.dart';
 import 'ui_effects.dart';
 import 'about_application_page.dart';
+import 'settings_page.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
 
   // ============================================================
   // COLORS
@@ -34,37 +45,89 @@ class ProfilePage extends StatelessWidget {
   static const Color mutedText = Color(0xFF8E8E93);
   static const Color softText = Color(0xFFC8C8CC);
 
-  // ============================================================
-  // DATA STATISTIK (sementara hardcode, nanti bisa dari database)
-  // ============================================================
+  final UserService _userService = UserService();
+  final MyListService _myListService = MyListService();
+  User? _user;
+  Map<String, dynamic> _profile = {};
+  List<MyListEntry> _entries = [];
+  bool _loadingProfile = true;
+  String? _profileError;
+  Stream<List<MyListEntry>>? _myListStream;
 
-  static const _Stats _film = _Stats(
-    watching: 2,
-    completed: 4,
-    onHold: 1,
-    dropped: 0,
-    planToWatch: 0,
-  );
+  @override
+  void initState() {
+    super.initState();
+    _user = FirebaseAuth.instance.currentUser;
+    _myListStream = _myListService.watchAll();
+    _loadProfile();
+  }
 
-  static const _Stats _series = _Stats(
-    watching: 1,
-    completed: 4,
-    onHold: 2,
-    dropped: 1,
-    planToWatch: 5,
-  );
+  Future<void> _loadProfile() async {
+    try {
+      final data = await _userService.getCurrentProfile();
+      if (!mounted) return;
+      setState(() {
+        _profile = data;
+        _loadingProfile = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _profileError = error.toString();
+        _loadingProfile = false;
+      });
+    }
+  }
 
-  static const _Stats _anime = _Stats(
-    watching: 0,
-    completed: 5,
-    onHold: 3,
-    dropped: 2,
-    planToWatch: 12,
-  );
+  _Stats _statsFor(String type) {
+    final items = _entries.where((e) => _normalizeType(e.mediaType) == type);
+    return _Stats(
+      watching: items.where((e) => e.status == MyListStatus.watching).length,
+      completed: items.where((e) => e.status == MyListStatus.completed).length,
+      onHold: items.where((e) => e.status == MyListStatus.onHold).length,
+      dropped: items.where((e) => e.status == MyListStatus.dropped).length,
+      planToWatch: items.where((e) => e.status == MyListStatus.planToWatch).length,
+    );
+  }
+
+  String _normalizeType(String type) {
+    final value = type.toLowerCase();
+    if (value == 'film' || value == 'movie') return 'Film';
+    if (value == 'anime') return 'Anime';
+    if (value == 'series' || value == 'j-drama' || value == 'k-drama' || value == 'jdrama' || value == 'kdrama' || value == 'tv') return 'Series';
+    return 'Series';
+  }
+
+  _Stats get _film => _statsFor('Film');
+  _Stats get _series => _statsFor('Series');
+  _Stats get _anime => _statsFor('Anime');
+
+  String _joinedDate() {
+    final created = _user?.metadata.creationTime;
+    if (created == null) return 'Unknown';
+    return '${_month(created.month)} ${created.day}, ${created.year}';
+  }
+
+  String _month(int month) => const [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ][month - 1];
+
+  String get _username {
+    final name = (_profile['username'] ?? _user?.displayName ?? '').toString().trim();
+    if (name.isNotEmpty) return name;
+    final email = _user?.email;
+    return email != null && email.contains('@') ? email.split('@').first : 'Pengguna MYDVAN';
+  }
+
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return StreamBuilder<List<MyListEntry>>(
+      stream: _myListStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasData) _entries = snapshot.data!;
+        return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
         child: DefaultTextStyle.merge(
@@ -126,6 +189,8 @@ class ProfilePage extends StatelessWidget {
         ),
       ),
     );
+      },
+    );
   }
 
   // ============================================================
@@ -180,7 +245,10 @@ class ProfilePage extends StatelessWidget {
             },
           ),
 
-          _headerButton(text: 'Settings', onPressed: () {}),
+          _headerButton(text: 'Settings', onPressed: () async {
+            await Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
+            if (mounted) await _loadProfile();
+          }),
           _headerButton(
             text: 'Logout',
             color: const Color(0xFFE57373),
@@ -259,30 +327,18 @@ class ProfilePage extends StatelessWidget {
 
     final avatar = ClipRRect(
       borderRadius: BorderRadius.circular(10),
-      child: Image.asset(
-        'assets/masha.jpg',
-        width: 120,
-        height: 120,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          width: 120,
-          height: 120,
-          color: cardColor,
-          alignment: Alignment.center,
-          child: const Text(
-            'F',
-            style: TextStyle(fontSize: 44, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
+      child: (_profile['photoUrl'] ?? _user?.photoURL) is String && ((_profile['photoUrl'] ?? _user?.photoURL) as String).isNotEmpty
+          ? Image.network((_profile['photoUrl'] ?? _user!.photoURL!) as String, width: 120, height: 120, fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => _avatarFallback())
+          : _avatarFallback(),
     );
 
     final identity = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          'Flooooooo',
+        Text(
+          _loadingProfile ? 'Loading profile...' : _username,
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w800,
@@ -290,8 +346,8 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Member since Nov 25, 2024',
+        Text(
+          'Member since ${_joinedDate()}',
           style: TextStyle(color: mutedText, fontSize: 14),
         ),
         const SizedBox(height: 12),
@@ -379,6 +435,12 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  Widget _avatarFallback() => Container(
+    width: 120, height: 120, color: cardColor, alignment: Alignment.center,
+    child: Text(_username.isEmpty ? 'U' : _username[0].toUpperCase(),
+      style: const TextStyle(fontSize: 44, fontWeight: FontWeight.bold)),
+  );
+
   Widget _heroNumber(String label, int value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,25 +478,11 @@ class ProfilePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'No biography yet. Write it now.',
-                style: TextStyle(color: softText, fontSize: 14, height: 1.5),
+              Text(
+                (_profile['bio'] ?? '').toString().trim().isEmpty ? 'No biography yet.' : _profile['bio'].toString(),
+                style: const TextStyle(color: softText, fontSize: 14, height: 1.5),
               ),
-              const SizedBox(height: 10),
-              InkWell(
-                onTap: () {},
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 2),
-                  child: Text(
-                    'Write biography',
-                    style: TextStyle(
-                      color: lightBlue,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
+
             ],
           ),
         ),
@@ -446,9 +494,9 @@ class ProfilePage extends StatelessWidget {
           title: 'Details',
           child: Column(
             children: [
-              _infoRow(title: 'Last Online', value: 'Now'),
-              _infoRow(title: 'Joined', value: 'Nov 25, 2024'),
-              _infoRow(title: 'Lists', value: '3', last: true),
+              _infoRow(title: 'Email', value: _user?.email ?? 'Unknown'),
+              _infoRow(title: 'Joined', value: _joinedDate()),
+              _infoRow(title: 'Lists', value: '${[_film.total, _series.total, _anime.total].where((v) => v > 0).length}', last: true),
             ],
           ),
         ),
@@ -460,11 +508,11 @@ class ProfilePage extends StatelessWidget {
           title: 'My Lists',
           child: Column(
             children: [
-              _listButton(context, 'Film List', movieData.length, 'Film'),
+              _listButton(context, 'Film List', _film.total, 'Film'),
               const SizedBox(height: 8),
-              _listButton(context, 'Series List', seriesData.length, 'Series'),
+              _listButton(context, 'Series List', _series.total, 'Series'),
               const SizedBox(height: 8),
-              _listButton(context, 'Anime List', animeData.length, 'Anime'),
+              _listButton(context, 'Anime List', _anime.total, 'Anime'),
             ],
           ),
         ),
@@ -814,30 +862,20 @@ class ProfilePage extends StatelessWidget {
       children: [
         _sectionHeader('Recent Activity', 'History'),
         const SizedBox(height: 10),
-        _activityItem(
-          context: context,
-          title: 'Oldboy',
-          type: 'Film',
-          status: 'Completed',
-          score: '9',
-          date: 'May 31, 2026',
-        ),
-        _activityItem(
-          context: context,
-          title: 'The Boys',
-          type: 'Series',
-          status: 'Completed',
-          score: '5',
-          date: 'May 13, 2026',
-        ),
-        _activityItem(
-          context: context,
-          title: 'Barakamon',
-          type: 'Anime',
-          status: 'Completed',
-          score: '10',
-          date: 'May 08, 2026',
-        ),
+        if (_entries.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            child: Text('Belum ada aktivitas My List.', style: TextStyle(color: mutedText)),
+          )
+        else
+          ...(_entries.take(5).map((entry) => _activityItem(
+            context: context,
+            title: entry.title,
+            type: _normalizeType(entry.mediaType),
+            status: entry.status,
+            score: entry.score?.toString() ?? '-',
+            date: entry.updatedAt == null ? 'Recently added' : '${_month(entry.updatedAt!.month)} ${entry.updatedAt!.day}, ${entry.updatedAt!.year}',
+          ))),
       ],
     );
   }

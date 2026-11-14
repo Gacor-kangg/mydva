@@ -1094,65 +1094,6 @@
       ));
     }
 
-    /// Gaya MyAnimeList: karakter di kiri, voice actor di kanan.
-    Widget _animeCastRow(CastMember member) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: HoverLift(
-          hoverScale: 1.01,
-          child: _card(
-            child: Row(
-              children: [
-                _avatar(member.name, size: 44),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        member.name,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        member.role,
-                        style: const TextStyle(color: mutedText, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        member.voiceActor ?? '-',
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          color: lightBlue,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        member.language ?? '',
-                        style: const TextStyle(color: mutedText, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                _avatar(member.voiceActor ?? '?', size: 44),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
 
     // ----------------------------------------------------------
     // TAB 3: REVIEWS
