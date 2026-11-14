@@ -7,13 +7,12 @@ import '../services/user_service.dart';
 import '../services/auth_service.dart';
 
 import 'home_page.dart';
-import 'media_data.dart';
 import 'media_detail_page.dart';
-import 'media_listpage.dart';
 import '../models/media_model.dart';
 import 'ui_effects.dart';
 import 'about_application_page.dart';
 import 'settings_page.dart';
+import 'my_list_history_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -91,16 +90,20 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   String _normalizeType(String type) {
-    final value = type.toLowerCase();
+    final value = type.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
     if (value == 'film' || value == 'movie') return 'Film';
     if (value == 'anime') return 'Anime';
-    if (value == 'series' || value == 'j-drama' || value == 'k-drama' || value == 'jdrama' || value == 'kdrama' || value == 'tv') return 'Series';
-    return 'Series';
+    if (value == 'jdrama') return 'J-Drama';
+    if (value == 'kdrama') return 'K-Drama';
+    if (value == 'series' || value == 'tv') return 'Series';
+    return type;
   }
 
   _Stats get _film => _statsFor('Film');
   _Stats get _series => _statsFor('Series');
   _Stats get _anime => _statsFor('Anime');
+  _Stats get _jDrama => _statsFor('J-Drama');
+  _Stats get _kDrama => _statsFor('K-Drama');
 
   String _joinedDate() {
     final created = _user?.metadata.creationTime;
@@ -323,7 +326,7 @@ class _ProfilePageState extends State<ProfilePage> {
   // ============================================================
 
   Widget _buildHero(bool wide) {
-    final all = _film + _series + _anime;
+    final all = _film + _series + _anime + _jDrama + _kDrama;
 
     final avatar = ClipRRect(
       borderRadius: BorderRadius.circular(10),
@@ -496,7 +499,7 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               _infoRow(title: 'Email', value: _user?.email ?? 'Unknown'),
               _infoRow(title: 'Joined', value: _joinedDate()),
-              _infoRow(title: 'Lists', value: '${[_film.total, _series.total, _anime.total].where((v) => v > 0).length}', last: true),
+              _infoRow(title: 'Lists', value: '${[_film.total, _series.total, _anime.total, _jDrama.total, _kDrama.total].where((v) => v > 0).length}', last: true),
             ],
           ),
         ),
@@ -511,6 +514,10 @@ class _ProfilePageState extends State<ProfilePage> {
               _listButton(context, 'Film List', _film.total, 'Film'),
               const SizedBox(height: 8),
               _listButton(context, 'Series List', _series.total, 'Series'),
+              const SizedBox(height: 8),
+              _listButton(context, 'J-Drama List', _jDrama.total, 'J-Drama'),
+              const SizedBox(height: 8),
+              _listButton(context, 'K-Drama List', _kDrama.total, 'K-Drama'),
               const SizedBox(height: 8),
               _listButton(context, 'Anime List', _anime.total, 'Anime'),
             ],
@@ -589,14 +596,7 @@ class _ProfilePageState extends State<ProfilePage> {
       child: InkWell(
         borderRadius: BorderRadius.circular(6),
         hoverColor: const Color(0x224A6FC3),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MediaListPage(initialType: type),
-            ),
-          );
-        },
+        onTap: () => _openMyListHistory(context, type),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
@@ -638,47 +638,32 @@ class _ProfilePageState extends State<ProfilePage> {
         LayoutBuilder(
           builder: (context, constraints) {
             final cards = [
-              Reveal(
-                delay: const Duration(milliseconds: 300),
-                child: HoverLift(
-                  hoverScale: 1.015,
-                  child: _statisticsCard(title: 'Film', stats: _film),
-                ),
-              ),
-              Reveal(
-                delay: const Duration(milliseconds: 400),
-                child: HoverLift(
-                  hoverScale: 1.015,
-                  child: _statisticsCard(title: 'Series', stats: _series),
-                ),
-              ),
-              Reveal(
-                delay: const Duration(milliseconds: 500),
-                child: HoverLift(
-                  hoverScale: 1.015,
-                  child: _statisticsCard(title: 'Anime', stats: _anime),
-                ),
-              ),
+              _statisticsCard(title: 'Film', stats: _film),
+              _statisticsCard(title: 'Series', stats: _series),
+              _statisticsCard(title: 'J-Drama', stats: _jDrama),
+              _statisticsCard(title: 'K-Drama', stats: _kDrama),
+              _statisticsCard(title: 'Anime', stats: _anime),
             ];
+            final columns = constraints.maxWidth >= 1100
+                ? 5
+                : constraints.maxWidth >= 650
+                    ? 3
+                    : 1;
+            final spacing = 14.0;
+            final itemWidth = (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
-            if (constraints.maxWidth >= 640) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (int i = 0; i < cards.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 14),
-                    Expanded(child: cards[i]),
-                  ],
-                ],
-              );
-            }
-
-            return Column(
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
               children: [
-                for (int i = 0; i < cards.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 14),
-                  cards[i],
-                ],
+                for (int i = 0; i < cards.length; i++)
+                  SizedBox(
+                    width: itemWidth,
+                    child: Reveal(
+                      delay: Duration(milliseconds: 300 + (i * 100)),
+                      child: HoverLift(hoverScale: 1.015, child: cards[i]),
+                    ),
+                  ),
               ],
             );
           },
@@ -691,7 +676,17 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _sectionHeader(String title, String link) {
+  void _openMyListHistory(BuildContext context, [String? type]) {
+    final title = type == null ? 'My List History' : '$type List History';
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MyListHistoryPage(mediaType: type, pageTitle: title),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title, String link, {VoidCallback? onTap}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -701,7 +696,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const Spacer(),
         TextButton(
-          onPressed: () {},
+          onPressed: onTap,
           child: Text(
             link,
             style: const TextStyle(color: lightBlue, fontSize: 14),
@@ -860,37 +855,46 @@ class _ProfilePageState extends State<ProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader('Recent Activity', 'History'),
+        _sectionHeader('Recent Activity', 'History', onTap: () => _openMyListHistory(context)),
         const SizedBox(height: 10),
-        if (_entries.isEmpty)
+        if (_entries.where((entry) => entry.score != null).isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 18),
-            child: Text('Belum ada aktivitas My List.', style: TextStyle(color: mutedText)),
+            child: Text('Belum ada rating yang diberikan.', style: TextStyle(color: mutedText)),
           )
         else
-          ...(_entries.take(5).map((entry) => _activityItem(
-            context: context,
-            title: entry.title,
-            type: _normalizeType(entry.mediaType),
-            status: entry.status,
-            score: entry.score?.toString() ?? '-',
-            date: entry.updatedAt == null ? 'Recently added' : '${_month(entry.updatedAt!.month)} ${entry.updatedAt!.day}, ${entry.updatedAt!.year}',
-          ))),
+          ...((_entries.where((entry) => entry.score != null).toList()
+                ..sort((a, b) => (b.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+                    .compareTo(a.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0))))
+              .take(3)
+              .map((entry) => _activityItem(
+                context: context,
+                entry: entry,
+                title: entry.title,
+                type: _normalizeType(entry.mediaType),
+                status: entry.status,
+                score: entry.score!.toString(),
+                date: entry.updatedAt == null ? 'Tanggal tidak tersedia' : '${_month(entry.updatedAt!.month)} ${entry.updatedAt!.day}, ${entry.updatedAt!.year}',
+              ))),
       ],
     );
   }
 
-  /// Cari data media berdasarkan judul supaya poster ikut data utama.
-  MediaModel? _findMedia(String title) {
-    final all = [...movieData, ...seriesData, ...animeData];
-    for (final m in all) {
-      if (m.title.toLowerCase() == title.toLowerCase()) return m;
-    }
-    return null;
+  /// Membuat model detail dari metadata yang sudah tersimpan di Firestore.
+  /// Dengan demikian Recent Activity tidak bergantung pada katalog lokal.
+  MediaModel _mediaFromMyListEntry(MyListEntry entry) {
+    return MediaModel(
+      title: entry.title,
+      imageUrl: entry.imageUrl,
+      genre: entry.mediaType,
+      releaseYear: entry.releaseYear,
+      externalId: entry.externalId,
+      mediaType: entry.mediaType,
+      source: entry.source,
+    );
   }
 
-  /// Poster tanpa icon: kalau gambar kosong/gagal, tampilkan huruf awal judul.
-  Widget _poster(String title) {
+  Widget _poster(String title, String imageUrl) {
     const double w = 58;
     const double h = 82;
 
@@ -909,56 +913,44 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
 
-    final src = _findMedia(title)?.imageUrl ?? '';
-
-    Widget image;
-    if (src.isEmpty) {
-      image = initial();
-    } else if (src.startsWith('http')) {
-      image = Image.network(
-        src,
-        width: w,
-        height: h,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => initial(),
-      );
-    } else {
-      image = Image.asset(
-        src,
-        width: w,
-        height: h,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => initial(),
-      );
-    }
+    final src = imageUrl.trim();
+    final image = src.isEmpty
+        ? initial()
+        : Image.network(
+            src,
+            width: w,
+            height: h,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => initial(),
+          );
 
     return ClipRRect(borderRadius: BorderRadius.circular(4), child: image);
   }
 
   Widget _activityItem({
     required BuildContext context,
+    required MyListEntry entry,
     required String title,
     required String type,
     required String status,
     required String score,
     required String date,
   }) {
-    final media = _findMedia(title);
+    final media = _mediaFromMyListEntry(entry);
 
     return HoverLift(
       hoverScale: 1.01,
-      onTap: media == null
-          ? null
-          : () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MediaDetailPage(media: media),
-                ),
-              );
-            },
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MediaDetailPage(media: media),
+          ),
+        );
+      },
       child: _activityCard(
         title: title,
+        imageUrl: entry.imageUrl,
         type: type,
         status: status,
         score: score,
@@ -969,6 +961,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _activityCard({
     required String title,
+    required String imageUrl,
     required String type,
     required String status,
     required String score,
@@ -984,7 +977,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Row(
         children: [
-          _poster(title),
+          _poster(title, imageUrl),
 
           const SizedBox(width: 14),
 
