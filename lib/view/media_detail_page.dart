@@ -1,6 +1,7 @@
   import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:share_plus/share_plus.dart';
   import 'package:firebase_auth/firebase_auth.dart';
   import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -410,6 +411,34 @@ import 'package:cached_network_image/cached_network_image.dart';
       );
     }
 
+    Future<void> _shareMedia() async {
+      final media = widget.media;
+      final details = <String>[
+        media.getDisplayTitle(),
+        'Kategori: ${media.mediaType}',
+        if (_apiScore != null)
+          'Rating: ${_apiScore!.toStringAsFixed(1)}/10${media.ratingSource != null ? ' (${media.ratingSource})' : ''}',
+        if (media.overview?.trim().isNotEmpty == true)
+          'Sinopsis: ${media.overview!.trim()}',
+        if (media.imageUrl.trim().isNotEmpty)
+          'Poster: ${media.imageUrl.trim()}',
+        '\nDibagikan melalui MYDVAN',
+      ];
+
+      try {
+        await SharePlus.instance.share(
+          ShareParams(
+            title: media.getDisplayTitle(),
+            text: details.join('\n'),
+          ),
+        );
+      } catch (error) {
+        if (mounted) {
+          _showMessage('Gagal membagikan informasi media: $error');
+        }
+      }
+    }
+
     Widget _buildHeader(BuildContext context) {
       return Container(
         height: 60,
@@ -443,6 +472,12 @@ import 'package:cached_network_image/cached_network_image.dart';
                 fontWeight: FontWeight.w600,
                 letterSpacing: 2,
               ),
+            ),
+            const Spacer(),
+            IconButton(
+              tooltip: 'Bagikan media',
+              onPressed: _shareMedia,
+              icon: const Icon(Icons.share_outlined, color: Colors.white),
             ),
           ],
         ),
