@@ -1,4 +1,5 @@
   import 'package:flutter/material.dart';
+import 'package:photo_view/photo_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
   import 'package:firebase_auth/firebase_auth.dart';
   import 'package:cloud_firestore/cloud_firestore.dart';
@@ -448,12 +449,73 @@ import 'package:cached_network_image/cached_network_image.dart';
       );
     }
 
+    void _openPosterViewer() {
+      final imageUrl = widget.media.imageUrl.trim();
+      final isValidUrl = imageUrl.startsWith('https://') ||
+          imageUrl.startsWith('http://');
+
+      if (!isValidUrl) {
+        _showMessage('Poster tidak tersedia untuk diperbesar.');
+        return;
+      }
+
+      showDialog<void>(
+        context: context,
+        barrierColor: Colors.black,
+        builder: (dialogContext) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.zero,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: PhotoView(
+                  imageProvider: CachedNetworkImageProvider(imageUrl),
+                  backgroundDecoration: const BoxDecoration(
+                    color: Colors.black,
+                  ),
+                  minScale: PhotoViewComputedScale.contained,
+                  maxScale: PhotoViewComputedScale.covered * 3,
+                  loadingBuilder: (context, event) => const Center(
+                    child: CircularProgressIndicator(color: lightBlue),
+                  ),
+                  errorBuilder: (context, error, stackTrace) => const Center(
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.white70,
+                      size: 48,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 28,
+                right: 16,
+                child: IconButton(
+                  tooltip: 'Tutup',
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     Widget _buildHero(bool wide) {
       final media = widget.media;
 
-      final poster = ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: PosterImage(media: media, width: 210, height: 300, textSize: 64),
+      final poster = GestureDetector(
+        onTap: () => _openPosterViewer(),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: PosterImage(
+            media: media,
+            width: 210,
+            height: 300,
+            textSize: 64,
+          ),
+        ),
       );
 
       final metaParts = <String>[

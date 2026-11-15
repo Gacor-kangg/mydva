@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import 'app_colors.dart';
 import 'media_detail_page.dart';
@@ -411,18 +410,7 @@ class _HomePageState extends State<HomePage> {
                         for (final section in sections) ...[
                           KeyedSubtree(
                             key: _keyFor(section.title),
-                            child: _buildSectionTitle(section)
-                                .animate()
-                                .fadeIn(
-                                  duration: 350.ms,
-                                  curve: Curves.easeOut,
-                                )
-                                .slideY(
-                                  begin: 0.08,
-                                  end: 0,
-                                  duration: 350.ms,
-                                  curve: Curves.easeOutCubic,
-                                ),
+                            child: _buildSectionTitle(section),
                           ),
                           const SizedBox(height: 12),
                           _buildHorizontalList(section),
@@ -1071,14 +1059,6 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-    ).animate().fadeIn(
-      duration: 400.ms,
-      curve: Curves.easeOut,
-    ).slideY(
-      begin: 0.06,
-      end: 0,
-      duration: 400.ms,
-      curve: Curves.easeOutCubic,
     );
   }
 }
