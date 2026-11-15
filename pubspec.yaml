@@ -24,6 +24,7 @@ dependencies:
   image_picker: ^1.2.4
   http: ^1.6.0
   cached_network_image: ^4.0.7
+  flutter_animate: ^4.5.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -42,3 +43,4 @@ flutter:
   - assets/members/tri.jpeg
   - assets/members/maksima.jpg
   - assets/sakarina.jpg
+  - assets/members/gea.jpeg
