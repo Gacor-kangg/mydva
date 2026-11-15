@@ -31,30 +31,26 @@ class AboutApplicationPage extends StatelessWidget {
     _Member(
       nama: 'Maksima Insan A',
       nim: '25051204438',
-      deskripsi:
-          'I for insyaalllah.',
+      deskripsi: 'I for insyaalllah.',
       foto: 'assets/members/maksima.jpg',
     ),
     _Member(
       nama: 'Najwan Fairuz Z',
       nim: '25051204437',
-      deskripsi:
-          'hebad kamu mas',
+      deskripsi: 'hebad kamu mas',
       foto: 'assets/members/najwan.jpeg',
     ),
     _Member(
       nama: 'Geacealsia Shello A',
       nim: '25051204421',
-      deskripsi:
-          'Ceritakan sedikit tentang dirimu, minat, dan kontribusimu di proyek ini.',
+      deskripsi: 'Ceritakan sedikit tentang dirimu, minat, dan kontribusimu di proyek ini.',
       foto: 'assets/members/geacealsia.jpg',
     ),
     _Member(
-      nama: 'Saha',
-      nim: '21',
-      deskripsi:
-          'Ceritakan sedikit tentang dirimu, minat, dan kontribusimu di proyek ini.',
-      foto: 'assets/members/saha.jpg',
+      nama: 'Sakarina Harera',
+      nim: '25051204407',
+      deskripsi: 'you.only.live.once.do.it. ',
+      foto: 'assets/members/sakarina.jpg',
     ),
     _Member(
       nama: 'Tri Oktavia R ',
@@ -164,8 +160,11 @@ class AboutApplicationPage extends StatelessWidget {
                   width: 84,
                   height: 84,
                   color: AppColors.panel,
-                  child: const Icon(Icons.movie_outlined,
-                      color: AppColors.lightBlue, size: 36),
+                  child: const Icon(
+                    Icons.movie_outlined,
+                    color: AppColors.lightBlue,
+                    size: 36,
+                  ),
                 ),
               ),
             ),
@@ -339,10 +338,7 @@ class _MemberCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AspectRatio(aspectRatio: 1, child: _photo()),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: _info(),
-        ),
+        Padding(padding: const EdgeInsets.all(16), child: _info()),
       ],
     );
   }
@@ -354,10 +350,7 @@ class _MemberCard extends StatelessWidget {
         children: [
           SizedBox(width: 110, child: _photo()),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: _info(),
-            ),
+            child: Padding(padding: const EdgeInsets.all(14), child: _info()),
           ),
         ],
       ),
