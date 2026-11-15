@@ -52,7 +52,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic> _profile = {};
   List<MyListEntry> _entries = [];
   bool _loadingProfile = true;
-  String? _profileError;
+  // String? _profileError;
   Stream<List<MyListEntry>>? _myListStream;
 
   @override
@@ -74,7 +74,7 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _profileError = error.toString();
+        // _profileError = error.toString();
         _loadingProfile = false;
       });
     }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+import '../models/media_model.dart';
 import '../models/my_list_entry.dart';
 import '../services/my_list_service.dart';
+import 'media_detail_page.dart';
 
 enum _SortOption {
   newest('Terbaru'),
@@ -659,15 +661,49 @@ class _MyListHistoryPageState extends State<MyListHistoryPage> {
   // ITEM LIST
   // ============================================================
 
-  Widget _buildItem(MyListEntry entry) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _panel,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _border),
+  /// Membuat model detail dari metadata yang tersimpan di My List,
+  /// sama seperti yang dipakai di Recent Activity pada halaman profil.
+  MediaModel _mediaFromEntry(MyListEntry entry) {
+    return MediaModel(
+      title: entry.title,
+      imageUrl: entry.imageUrl,
+      genre: entry.mediaType,
+      releaseYear: entry.releaseYear,
+      externalId: entry.externalId,
+      mediaType: entry.mediaType,
+      source: entry.source,
+    );
+  }
+
+  void _openDetail(MyListEntry entry) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MediaDetailPage(media: _mediaFromEntry(entry)),
       ),
-      child: Row(
+    );
+  }
+
+  Widget _buildItem(MyListEntry entry) {
+    return Material(
+      color: _panel,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: _border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _openDetail(entry),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: _buildItemContent(entry),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemContent(MyListEntry entry) {
+    return Row(
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(5),
@@ -729,7 +765,6 @@ class _MyListHistoryPageState extends State<MyListHistoryPage> {
             ],
           ),
         ],
-      ),
     );
   }
 }

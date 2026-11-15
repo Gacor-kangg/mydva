@@ -35,6 +35,20 @@ class UserService {
     };
   }
 
+  /// Stream URL foto profil user yang sedang login. Emit ulang setiap kali
+  /// foto diubah atau dihapus, sehingga halaman lain (mis. Home) ikut
+  /// diperbarui tanpa perlu dimuat ulang. Bernilai null jika tidak ada foto.
+  Stream<String?> watchPhotoUrl() {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(null);
+    return _firestore.collection('users').doc(user.uid).snapshots().map((doc) {
+      final fromDb = doc.data()?['photoUrl']?.toString().trim();
+      if (fromDb != null && fromDb.isNotEmpty) return fromDb;
+      final fromAuth = _auth.currentUser?.photoURL?.trim();
+      return (fromAuth != null && fromAuth.isNotEmpty) ? fromAuth : null;
+    });
+  }
+
   Future<String> getCurrentUsername() async => (await getCurrentProfile())['username']?.toString() ?? fallbackUsername;
 
   Future<void> updateProfile({required String username, required String bio}) async {

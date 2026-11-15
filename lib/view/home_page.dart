@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
@@ -11,6 +12,7 @@ import '../repositories/media_repository.dart';
 import '../services/anilist_service.dart';
 import '../services/kitsu_service.dart';
 import '../services/tmdb_service.dart';
+import '../services/user_service.dart';
 import 'poster_image.dart';
 import 'profile_page.dart';
 import 'skeletons.dart';
@@ -93,6 +95,7 @@ class _HomePageState extends State<HomePage> {
     'K-Drama Terbaru',
   ];
 
+  final Stream<String?> _photoStream = UserService().watchPhotoUrl();
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _sectionKeys = {};
   late final List<String> _navTitles;
@@ -847,9 +850,24 @@ class _HomePageState extends State<HomePage> {
             shape: BoxShape.circle,
             border: Border.all(color: const Color(0xFF444444)),
           ),
-          child: const CircleAvatar(
-            radius: 18,
-            backgroundImage: AssetImage('assets/masha.jpg'),
+          child: StreamBuilder<String?>(
+            stream: _photoStream,
+            builder: (context, snapshot) {
+              final photoUrl = snapshot.data;
+              final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
+              return CircleAvatar(
+                radius: 18,
+                backgroundColor: const Color(0xFF26262A),
+                // Bila user belum punya foto (atau foto gagal dimuat),
+                // tampilkan ikon orang sebagai gambar bawaan.
+                backgroundImage:
+                    hasPhoto ? CachedNetworkImageProvider(photoUrl) : null,
+                onBackgroundImageError: hasPhoto ? (_, __) {} : null,
+                child: hasPhoto
+                    ? null
+                    : const Icon(Icons.person, size: 20, color: Color(0xFF8E8E93)),
+              );
+            },
           ),
         ),
       ),

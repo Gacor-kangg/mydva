@@ -26,6 +26,7 @@ dependencies:
   cached_network_image: ^4.0.7
   flutter_animate: ^4.5.2
   share_plus: ^13.3.1
+  photo_view: ^0.15.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -37,11 +38,9 @@ flutter:
   uses-material-design: true
   
   assets:
-  - .env
   - assets/logo.png
-  - assets/masha.jpg
   - assets/members/najwan.jpeg
   - assets/members/tri.jpeg
   - assets/members/maksima.jpg
-  - assets/sakarina.jpg
+  - assets/members/sakarina.jpeg
   - assets/members/gea.jpeg
