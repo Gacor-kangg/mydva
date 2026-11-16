@@ -1506,8 +1506,14 @@
         if (value == 'delete') onDelete();
       },
       itemBuilder: (context) => const [
-        PopupMenuItem(value: 'edit', child: Text('Edit')),
-        PopupMenuItem(value: 'delete', child: Text('Hapus')),
+        PopupMenuItem(
+          value: 'edit',
+          child: Text('Edit', style: TextStyle(color: Colors.white)),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text('Hapus', style: TextStyle(color: Color(0xFFE57373))),
+        ),
       ],
     );
 

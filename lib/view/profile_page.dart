@@ -617,6 +617,7 @@ class _ProfilePageState extends State<ProfilePage> {
               Text(
                 text,
                 style: const TextStyle(
+                  color: Colors.white,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
