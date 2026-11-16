@@ -1,10 +1,12 @@
 class MediaDetailModel {
   final String? synopsis;
+  final String? trailerKey; 
   final Map<String, String> information;
   final List<MediaCastMember> cast;
 
   const MediaDetailModel({
     this.synopsis,
+    this.trailerKey,
     this.information = const {},
     this.cast = const [],
   });

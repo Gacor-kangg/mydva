@@ -56,7 +56,8 @@ class MediaDetailService {
     try {
       final response = await Future.wait([
         _tmdb.get<dynamic>('/$kind/$id', queryParameters: {
-          'append_to_response': 'credits',
+          'append_to_response': 'credits,videos',
+          'include_video_language': 'en,id,null',
         }),
       ]);
       final data = ApiClient.asJsonMap(response.first.data, source: 'TMDB');
@@ -102,6 +103,7 @@ class MediaDetailService {
       };
       return MediaDetailModel(
         synopsis: data['overview']?.toString(),
+        trailerKey: _pickTrailerKey(data['videos']),
         information: info,
         cast: cast,
       );
@@ -118,6 +120,7 @@ class MediaDetailService {
       startDate { year month day } endDate { year month day }
       nextAiringEpisode { episode airingAt }
       duration source genres averageScore
+      trailer { id site }
       studios { nodes { name } }
       tags { name rank }
       characters(sort: [ROLE, RELEVANCE], perPage: 25) {
@@ -174,7 +177,17 @@ class MediaDetailService {
       };
       final originalSynopsis = data['description']?.toString();
       final synopsis = await _translateSynopsis(originalSynopsis);
-      return MediaDetailModel(synopsis: synopsis, information: info, cast: cast);
+      String? trailerKey;
+      final trailer = data['trailer'];
+      if (trailer is Map && trailer['site'] == 'youtube') {
+        trailerKey = trailer['id']?.toString();
+      }
+      return MediaDetailModel(
+        synopsis: synopsis,
+        trailerKey: trailerKey,
+        information: info,
+        cast: cast,
+      );
     } on DioException catch (e) {
       throw ApiException.fromDio(e, source: 'AniList');
     }
@@ -197,7 +210,12 @@ class MediaDetailService {
       };
       final originalSynopsis = a['synopsis']?.toString();
       final synopsis = await _translateSynopsis(originalSynopsis);
-      return MediaDetailModel(synopsis: synopsis, information: info);
+      final yt = a['youtubeVideoId']?.toString();
+      return MediaDetailModel(
+        synopsis: synopsis,
+        trailerKey: (yt != null && yt.isNotEmpty) ? yt : null,
+        information: info,
+      );
     } on DioException catch (e) {
       throw ApiException.fromDio(e, source: 'Kitsu');
     }
@@ -214,6 +232,30 @@ class MediaDetailService {
     } catch (_) {
       return original;
     }
+  }
+
+  /// Memilih video YouTube terbaik: Trailer resmi, Trailer, lalu Teaser.
+  String? _pickTrailerKey(dynamic videos) {
+    final results = videos is Map ? videos['results'] : null;
+    if (results is! List) return null;
+
+    final youtube = results
+        .whereType<Map<String, dynamic>>()
+        .where((v) =>
+            v['site'] == 'YouTube' && (v['key'] ?? '').toString().isNotEmpty)
+        .toList();
+
+    Map<String, dynamic>? pick(bool Function(Map<String, dynamic>) test) {
+      for (final v in youtube) {
+        if (test(v)) return v;
+      }
+      return null;
+    }
+
+    final best = pick((v) => v['type'] == 'Trailer' && v['official'] == true) ??
+        pick((v) => v['type'] == 'Trailer') ??
+        pick((v) => v['type'] == 'Teaser');
+    return best?['key']?.toString();
   }
 
   void dispose() {

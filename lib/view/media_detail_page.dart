@@ -1,9 +1,10 @@
   import 'package:flutter/material.dart';
-import 'package:photo_view/photo_view.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:share_plus/share_plus.dart';
+  import 'package:photo_view/photo_view.dart';
+  import 'package:cached_network_image/cached_network_image.dart';
+  import 'package:share_plus/share_plus.dart';
   import 'package:firebase_auth/firebase_auth.dart';
   import 'package:cloud_firestore/cloud_firestore.dart';
+  import 'trailer_player.dart';
 
   import '../controllers/media_feedback_controller.dart';
   import '../controllers/media_detail_controller.dart';
@@ -1081,6 +1082,11 @@ import 'package:share_plus/share_plus.dart';
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (detail?.trailerKey != null) ...[
+            _buildTrailer(detail!.trailerKey!),
+            const SizedBox(height: 16),
+          ],
+
           _card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             _label('Synopsis'), const SizedBox(height: 10),
             Text(synopsis, style: const TextStyle(color: softText, fontSize: 15, height: 1.6)),
@@ -1105,6 +1111,18 @@ import 'package:share_plus/share_plus.dart';
       );
     }
 
+    Widget _buildTrailer(String videoId) {
+      return _card(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('Trailer'),
+            const SizedBox(height: 10),
+            TrailerPlayer(key: ValueKey(videoId), videoId: videoId),
+          ],
+        ),
+      );
+    }
     Widget _infoRow(String title, String value, {bool last = false}) {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
