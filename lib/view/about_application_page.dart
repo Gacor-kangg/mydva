@@ -47,14 +47,14 @@ class AboutApplicationPage extends StatelessWidget {
       nim: '25051204421',
       deskripsi:
           'Ceritakan sedikit tentang dirimu, minat, dan kontribusimu di proyek ini.',
-      foto: 'assets/members/geacealsia.jpg',
+      foto: 'assets/members/gea.jpeg',
     ),
     _Member(
-      nama: 'Saha',
-      nim: '21',
+      nama: 'Sakarina Harera',
+      nim: '25051204407',
       deskripsi:
-          'Ceritakan sedikit tentang dirimu, minat, dan kontribusimu di proyek ini.',
-      foto: 'assets/members/saha.jpg',
+          'you.only.live.once.do.it.',
+      foto: 'assets/members/sakarina.jpeg',
     ),
     _Member(
       nama: 'Tri Oktavia R ',
