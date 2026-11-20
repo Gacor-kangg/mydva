@@ -238,26 +238,74 @@ class _ProfilePageState extends State<ProfilePage> {
 
           const Spacer(),
 
-          _headerButton(
-            text: 'About Applications',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AboutApplicationPage(),
-                ),
-              );
+          // MENU 3 GARIS (About, Settings, Logout)
+          PopupMenuButton<String>(
+            tooltip: '',
+            offset: const Offset(0, 48),
+            color: cardColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(color: borderColor),
+            ),
+            onSelected: (value) async {
+              if (value == 'about') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AboutApplicationPage(),
+                  ),
+                );
+              } else if (value == 'settings') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsPage()),
+                );
+                if (mounted) await _loadProfile();
+              } else if (value == 'logout') {
+                _showLogoutDialog(context);
+              }
             },
-          ),
-
-          _headerButton(text: 'Settings', onPressed: () async {
-            await Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
-            if (mounted) await _loadProfile();
-          }),
-          _headerButton(
-            text: 'Logout',
-            color: const Color(0xFFE57373),
-            onPressed: () => _showLogoutDialog(context),
+            itemBuilder: (context) => const [
+              PopupMenuItem<String>(
+                value: 'about',
+                child: Text(
+                  'About Applications',
+                  style: TextStyle(color: lightBlue, fontSize: 14),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'settings',
+                child: Text(
+                  'Settings',
+                  style: TextStyle(color: lightBlue, fontSize: 14),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'logout',
+                child: Text(
+                  'Logout',
+                  style: TextStyle(color: Color(0xFFE57373), fontSize: 14),
+                ),
+              ),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(
+                  3,
+                  (i) => Container(
+                    width: 22,
+                    height: 2,
+                    margin: EdgeInsets.only(top: i == 0 ? 0 : 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),

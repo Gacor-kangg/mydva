@@ -1,4 +1,5 @@
   import 'package:flutter/material.dart';
+  import 'package:flutter/services.dart';
   import 'package:photo_view/photo_view.dart';
   import 'package:cached_network_image/cached_network_image.dart';
   import 'package:share_plus/share_plus.dart';
@@ -135,6 +136,9 @@
     String? _status;
     int? _myScore;
     int _progress = 0;
+    final TextEditingController _progressController = TextEditingController();
+    final FocusNode _progressFocus = FocusNode();
+    bool _editingProgress = false;
     bool _saved = false;
     bool _inList = false; // sudah tersimpan di database
     bool _loadingList = true; // sedang memuat My List dari database
@@ -161,11 +165,31 @@
     String get _type => widget.media.genre ?? 'Film';
     bool get _hasProgress => _type != 'Film';
 
+    int? get _totalEpisodes {
+      final local = _detail.episodes;
+      if (local != null && local > 0) return local;
+
+      final fromApi = int.tryParse(_apiDetail?.information['Episodes'] ?? '');
+      return (fromApi != null && fromApi > 0) ? fromApi : null;
+    }
+    int? get _airedEpisodes {
+      final text = _apiDetail?.information['Next Episode'] ?? '';
+      final next = int.tryParse(RegExp(r'\d+').firstMatch(text)?.group(0) ?? '');
+      return (next != null && next > 1) ? next - 1 : null;
+    }
+
+    int? get _maxEpisodes => _totalEpisodes ?? _airedEpisodes;
+
+    bool get _maxIsAiredOnly => _totalEpisodes == null && _airedEpisodes != null;
+
     @override
     void initState() {
       super.initState();
 
       _detail = detailFor(widget.media);
+      _progressFocus.addListener(() {
+        if (!_progressFocus.hasFocus && _editingProgress) _commitProgress();
+      });
       _loadApiDetail();
       _loadMyList();
       _loadUsername();
@@ -236,6 +260,35 @@
       });
     }
 
+    void _startEditProgress() {
+      _progressController.text = '$_progress';
+      _progressController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _progressController.text.length,
+      );
+      setState(() => _editingProgress = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _progressFocus.requestFocus();
+      });
+    }
+
+    void _commitProgress() {
+      if (!_editingProgress) return;
+
+      final max = _maxEpisodes;
+      var value = int.tryParse(_progressController.text.trim()) ?? _progress;
+      if (value < 0) value = 0;
+      if (max != null && value > max) value = max;
+
+      setState(() {
+        _editingProgress = false;
+        if (value != _progress) {
+          _progress = value;
+          _saved = false;
+        }
+      });
+    }
+
     Future<void> _loadUsername() async {
       final name = await _userRepository.getCurrentUsername();
       if (!mounted) return;
@@ -264,7 +317,7 @@
         status: status,
         score: _myScore,
         progress: _progress,
-        totalEpisodes: _detail.episodes,
+        totalEpisodes: _maxEpisodes,
       );
 
       if (!mounted) return;
@@ -337,6 +390,8 @@
       _commentController.dispose();
       _replyController.dispose();
       _detailController.dispose();
+      _progressController.dispose();
+      _progressFocus.dispose();
 
       super.dispose();
     }
@@ -801,11 +856,14 @@
     }
 
     Widget _buildProgressControl() {
-      final max = _detail.episodes;
+      final max = _maxEpisodes;
 
       return Padding(
         padding: const EdgeInsets.only(top: 16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
           children: [
             const Text(
               'Episodes watched',
@@ -821,15 +879,84 @@
               }
             }),
             SizedBox(
-              width: 70,
+              width: 96,
               child: Center(
-                child: Text(
-                  max == null ? '$_progress' : '$_progress / $max',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: _editingProgress
+                    ? TextField(
+                        controller: _progressController,
+                        focusNode: _progressFocus,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          // langsung dibatasi saat mengetik (99 -> total episode)
+                          TextInputFormatter.withFunction((oldValue, newValue) {
+                            final limit = _maxEpisodes;
+                            final n = int.tryParse(newValue.text);
+                            if (limit == null || n == null || n <= limit) {
+                              return newValue;
+                            }
+                            final t = '$limit';
+                            return TextEditingValue(
+                              text: t,
+                              selection: TextSelection.collapsed(offset: t.length),
+                            );
+                          }),
+                        ],
+                        textAlign: TextAlign.center,
+                        onSubmitted: (_) => _commitProgress(),
+                        cursorColor: Colors.white,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 8,
+                          ),
+                          suffixText: max == null ? null : '/ $max',
+                          suffixStyle: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: const BorderSide(color: blue),
+                          ),
+                        ),
+                      )
+                    : MouseRegion(
+                        cursor: SystemMouseCursors.text,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _startEditProgress,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: borderColor),
+                              ),
+                            ),
+                            child: Text(
+                              max == null ? '$_progress' : '$_progress / $max',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
               ),
             ),
             _stepButton('+', () {
@@ -840,6 +967,16 @@
                 });
               }
             }),
+          ],
+        ),
+            if (_maxIsAiredOnly)
+              const Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: Text(
+                  'Masih tayang, batasnya episode yang sudah tayang.',
+                  style: TextStyle(color: mutedText, fontSize: 11),
+                ),
+              ),
           ],
         ),
       );
@@ -1214,66 +1351,6 @@
             : _avatar(name, size: 48),
       ));
     }
-
-    // /// Gaya MyAnimeList: karakter di kiri, voice actor di kanan.
-    // Widget _animeCastRow(CastMember member) {
-    //   return Padding(
-    //     padding: const EdgeInsets.only(bottom: 10),
-    //     child: HoverLift(
-    //       hoverScale: 1.01,
-    //       child: _card(
-    //         child: Row(
-    //           children: [
-    //             _avatar(member.name, size: 44),
-    //             const SizedBox(width: 12),
-    //             Expanded(
-    //               child: Column(
-    //                 crossAxisAlignment: CrossAxisAlignment.start,
-    //                 children: [
-    //                   Text(
-    //                     member.name,
-    //                     style: const TextStyle(
-    //                       fontSize: 15,
-    //                       fontWeight: FontWeight.w700,
-    //                     ),
-    //                   ),
-    //                   const SizedBox(height: 3),
-    //                   Text(
-    //                     member.role,
-    //                     style: const TextStyle(color: mutedText, fontSize: 13),
-    //                   ),
-    //                 ],
-    //               ),
-    //             ),
-    //             Expanded(
-    //               child: Column(
-    //                 crossAxisAlignment: CrossAxisAlignment.end,
-    //                 children: [
-    //                   Text(
-    //                     member.voiceActor ?? '-',
-    //                     textAlign: TextAlign.right,
-    //                     style: const TextStyle(
-    //                       color: lightBlue,
-    //                       fontSize: 15,
-    //                       fontWeight: FontWeight.w600,
-    //                     ),
-    //                   ),
-    //                   const SizedBox(height: 3),
-    //                   Text(
-    //                     member.language ?? '',
-    //                     style: const TextStyle(color: mutedText, fontSize: 13),
-    //                   ),
-    //                 ],
-    //               ),
-    //             ),
-    //             const SizedBox(width: 12),
-    //             _avatar(member.voiceActor ?? '?', size: 44),
-    //           ],
-    //         ),
-    //       ),
-    //     ),
-    //   );
-    // }
 
     // ----------------------------------------------------------
     // TAB 3: REVIEWS
