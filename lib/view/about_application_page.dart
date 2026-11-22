@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'app_colors.dart';
 import 'ui_effects.dart';
 
-/// Data satu anggota tim.
-/// - [foto]      : path asset, mis. 'assets/members/maksima.jpg'.
-/// - [deskripsi] : perkenalan singkat tentang anggota.
 class _Member {
   final String nama;
   final String nim;
   final String deskripsi;
   final String? foto;
+  final String? github;
+  final String? instagram;
 
   const _Member({
     required this.nama,
     required this.nim,
     required this.deskripsi,
     this.foto,
+    this.github,
+    this.instagram,
   });
 }
 
@@ -24,7 +26,7 @@ class AboutApplicationPage extends StatelessWidget {
   const AboutApplicationPage({super.key});
 
   // ============================================================
-  // DATA ANGGOTA (edit di sini)
+  // DATA ANGGOTA
   // ============================================================
 
   static const List<_Member> members = [
@@ -39,8 +41,10 @@ class AboutApplicationPage extends StatelessWidget {
       nama: 'Najwan Fairuz Z',
       nim: '25051204437',
       deskripsi:
-          'hebad kamu mas',
+          'is it better to speak or to die',
       foto: 'assets/members/najwan.jpeg',
+      github: 'floonly',
+      instagram: 'sassannnnnnn',
     ),
     _Member(
       nama: 'Geacealsia Shello A',
@@ -102,6 +106,18 @@ class AboutApplicationPage extends StatelessWidget {
                   delay: const Duration(milliseconds: 120),
                   child: _buildAboutCard(),
                 ),
+                const SizedBox(height: 34),
+                const Reveal(
+                  delay: Duration(milliseconds: 180),
+                  child: _SectionTitle('Fitur Utama'),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Yang bisa kamu lakukan di MYDVA.',
+                  style: TextStyle(color: AppColors.mutedText, fontSize: 13),
+                ),
+                const SizedBox(height: 18),
+                _buildFeatureGrid(),
                 const SizedBox(height: 34),
                 const Reveal(
                   delay: Duration(milliseconds: 220),
@@ -222,9 +238,7 @@ class AboutApplicationPage extends StatelessWidget {
           _SectionTitle('Tentang Aplikasi'),
           SizedBox(height: 12),
           Text(
-            'Aplikasi ini dikembangkan sebagai bagian dari proyek '
-            'pembelajaran untuk menerapkan pengetahuan dan keterampilan '
-            'dalam bidang pengembangan aplikasi.',
+            'MYDVA adalah aplikasi yang dirancang untuk membantu pengguna menemukan, menjelajahi, dan mengelola daftar tontonan film, series, anime, J-Drama, dan K-Drama. Aplikasi ini menyediakan informasi media, rating, sinopsis, serta fitur pengelolaan My List dalam satu platform.',
             style: TextStyle(
               color: AppColors.softText,
               fontSize: 14,
@@ -233,6 +247,61 @@ class AboutApplicationPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // ============================================================
+  // GRID FITUR
+  // ============================================================
+
+  static const List<_Feature> _features = [
+    _Feature(
+      '01',
+      'Katalog Lengkap',
+      'Jelajahi film, series, dan anime dalam satu tempat, lengkap dengan '
+          'sinopsis, pemeran, dan trailer.',
+    ),
+    _Feature(
+      '02',
+      'My List',
+      'Simpan judul ke daftarmu, lengkap dengan status tontonan dan rating '
+          'pribadi.',
+    ),
+    _Feature(
+      '03',
+      'Progress Episode',
+      'Catat sampai episode berapa kamu menonton, bisa langsung diketik.',
+    ),
+    _Feature(
+      '04',
+      'Statistik Profil',
+      'Lihat ringkasan tontonan, sebaran skor, dan aktivitas terbarumu.',
+    ),
+  ];
+
+  Widget _buildFeatureGrid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 14.0;
+        final w = constraints.maxWidth;
+        final columns = w >= 820 ? 4 : (w >= 560 ? 2 : 1);
+        final cardWidth = (w - spacing * (columns - 1)) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (int i = 0; i < _features.length; i++)
+              SizedBox(
+                width: cardWidth,
+                child: Reveal(
+                  delay: Duration(milliseconds: 200 + i * 80),
+                  child: _FeatureCard(feature: _features[i]),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -391,6 +460,8 @@ class _MemberCard extends StatelessWidget {
             height: 1.5,
           ),
         ),
+        const SizedBox(height: 14),
+        _SocialButtons(github: member.github, instagram: member.instagram),
       ],
     );
   }
@@ -424,6 +495,186 @@ class _MemberCard extends StatelessWidget {
       path,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => fallback,
+    );
+  }
+}
+
+// ==============================================================
+// FITUR UTAMA
+// ==============================================================
+
+class _Feature {
+  final String number;
+  final String title;
+  final String description;
+
+  const _Feature(this.number, this.title, this.description);
+}
+
+class _FeatureCard extends StatelessWidget {
+  final _Feature feature;
+
+  const _FeatureCard({required this.feature});
+
+  @override
+  Widget build(BuildContext context) {
+    return HoverLift(
+      hoverScale: 1.03,
+      radius: 10,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              feature.number,
+              style: const TextStyle(
+                color: AppColors.lightBlue,
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              feature.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              feature.description,
+              style: const TextStyle(
+                color: AppColors.softText,
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==============================================================
+// TOMBOL GITHUB & INSTAGRAM
+// ==============================================================
+
+/// Ubah username (atau link lengkap) menjadi URL. Kosong -> null.
+String? _profileUrl(String base, String? value) {
+  final v = value?.trim() ?? '';
+  if (v.isEmpty) return null;
+  if (v.startsWith('http://') || v.startsWith('https://')) return v;
+  return '$base${v.startsWith('@') ? v.substring(1) : v}';
+}
+
+class _SocialButtons extends StatelessWidget {
+  final String? github;
+  final String? instagram;
+
+  const _SocialButtons({this.github, this.instagram});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _SocialButton(
+          label: 'GitHub',
+          url: _profileUrl('https://github.com/', github),
+        ),
+        _SocialButton(
+          label: 'Instagram',
+          url: _profileUrl('https://www.instagram.com/', instagram),
+        ),
+      ],
+    );
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  final String label;
+  final String? url;
+
+  const _SocialButton({required this.label, required this.url});
+
+  Future<void> _open(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final target = url;
+
+    if (target == null) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Link $label belum diisi.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      return;
+    }
+
+    bool opened = false;
+    try {
+      opened = await launchUrl(
+        Uri.parse(target),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      opened = false;
+    }
+
+    if (!opened) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Tidak bisa membuka $label.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = url != null;
+
+    return Material(
+      color: enabled ? const Color(0x224A6FC3) : AppColors.panel,
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: enabled ? AppColors.blue : AppColors.border,
+        ),
+      ),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        hoverColor: const Color(0x334A6FC3),
+        onTap: () => _open(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: enabled ? AppColors.lightBlue : AppColors.mutedText,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

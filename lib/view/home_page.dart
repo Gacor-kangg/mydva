@@ -399,9 +399,9 @@ class _HomePageState extends State<HomePage> {
               children: [
                 if (_heroItems.isNotEmpty) _buildHero(),
                 if (_heroItems.isEmpty && _isLoading)
-                  SizedBox(
-                    height: _headerTotal() + 300,
-                    child: const Center(child: CircularProgressIndicator()),
+                  HeroSkeleton(
+                    topInset: _headerTotal(),
+                    wide: MediaQuery.of(context).size.width >= 720,
                   ),
                 const SizedBox(height: 26),
                 Center(
@@ -853,6 +853,11 @@ class _HomePageState extends State<HomePage> {
           child: StreamBuilder<String?>(
             stream: _photoStream,
             builder: (context, snapshot) {
+              // Foto profil belum datang -> shimmer
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
+                return const ProfileAvatarSkeleton(radius: 18);
+              }
               final photoUrl = snapshot.data;
               final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
               return CircleAvatar(

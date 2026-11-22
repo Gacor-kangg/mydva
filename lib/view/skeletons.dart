@@ -107,3 +107,100 @@ class PosterRowSkeleton extends StatelessWidget {
     );
   }
 }
+
+/// Skeleton banner (hero) di bagian atas homepage.
+class HeroSkeleton extends StatelessWidget {
+  /// Tinggi area header + status bar (supaya isi tidak tertutup header).
+  final double topInset;
+  final bool wide;
+
+  const HeroSkeleton({super.key, required this.topInset, required this.wide});
+
+  Widget _textBlocks() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _block(width: 80, height: 14),
+        const SizedBox(height: 14),
+        _block(width: wide ? 360 : 170, height: wide ? 34 : 24),
+        const SizedBox(height: 12),
+        _block(width: 150, height: 14),
+        const SizedBox(height: 18),
+        _block(height: 12),
+        const SizedBox(height: 8),
+        _block(height: 12),
+        const SizedBox(height: 8),
+        _block(width: wide ? 280 : 120, height: 12),
+        const SizedBox(height: 20),
+        _block(width: 120, height: 38, radius: 6),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final contentHeight = wide ? 360.0 : 320.0;
+    final poster = _block(
+      width: wide ? 190 : 100,
+      height: wide ? 285 : 150,
+      radius: 8,
+    );
+
+    return SizedBox(
+      height: topInset + contentHeight,
+      width: double.infinity,
+      child: _shimmer(
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            wide ? 64 : 18,
+            topInset + (wide ? 24 : 14),
+            wide ? 64 : 18,
+            wide ? 36 : 34,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1300),
+              child: wide
+                  ? Row(
+                      children: [
+                        Expanded(child: _textBlocks()),
+                        const SizedBox(width: 40),
+                        poster,
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        poster,
+                        const SizedBox(width: 16),
+                        Expanded(child: _textBlocks()),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lingkaran shimmer untuk foto profil di header saat foto belum dimuat.
+class ProfileAvatarSkeleton extends StatelessWidget {
+  final double radius;
+
+  const ProfileAvatarSkeleton({super.key, this.radius = 18});
+
+  @override
+  Widget build(BuildContext context) {
+    return _shimmer(
+      Container(
+        width: radius * 2,
+        height: radius * 2,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
