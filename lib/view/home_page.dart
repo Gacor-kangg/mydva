@@ -15,6 +15,7 @@ import '../services/tmdb_service.dart';
 import '../services/user_service.dart';
 import 'poster_image.dart';
 import 'profile_page.dart';
+import 'search_page.dart';
 import 'skeletons.dart';
 import 'ui_effects.dart';
 
@@ -81,25 +82,9 @@ class _HomePageState extends State<HomePage> {
   static const int _heroCount = 5;
   static const Duration _heroInterval = Duration(seconds: 6);
 
-  static const List<String> _sectionTitles = [
-    'Rekomendasi Untukmu',
-    'Series Terbaru',
-    'Series Unggulan',
-    'Film Populer',
-    'Film Terbaru',
-    'Anime Terpopuler',
-    'Anime Terbaru',
-    'J-Drama Terpopuler',
-    'J-Drama Terbaru',
-    'K-Drama Terpopuler',
-    'K-Drama Terbaru',
-  ];
-
   final Stream<String?> _photoStream = UserService().watchPhotoUrl();
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _sectionKeys = {};
-  late final List<String> _navTitles;
-  String _activeSection = '';
   final ValueNotifier<double> _headerOpacity = ValueNotifier<double>(0);
 
   List<MediaModel> _heroItems = [];
@@ -110,7 +95,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _navTitles = List<String>.from(_sectionTitles);
     _tmdbService = TmdbService();
     _anilistService = AnilistService();
     _kitsuService = KitsuService();
@@ -328,24 +312,6 @@ class _HomePageState extends State<HomePage> {
     if (_scrollController.hasClients) {
       _headerOpacity.value = (_scrollController.offset / 140).clamp(0.0, 1.0);
     }
-    _updateActiveSection();
-  }
-
-  void _scrollToSection(String title) {
-    final ctx = _sectionKeys[title]?.currentContext;
-    if (ctx == null || !_scrollController.hasClients) return;
-    final box = ctx.findRenderObject() as RenderBox?;
-    if (box == null || !box.attached) return;
-    final sectionTop = box.localToGlobal(Offset.zero).dy;
-    final target = (_scrollController.offset + sectionTop - _headerTotal() - 16)
-        .clamp(0.0, _scrollController.position.maxScrollExtent)
-        .toDouble();
-    setState(() => _activeSection = title);
-    _scrollController.animateTo(
-      target,
-      duration: const Duration(milliseconds: 650),
-      curve: Curves.easeInOutCubic,
-    );
   }
 
   void _scrollToTop() {
@@ -355,19 +321,6 @@ class _HomePageState extends State<HomePage> {
       duration: const Duration(milliseconds: 650),
       curve: Curves.easeInOutCubic,
     );
-  }
-
-  void _updateActiveSection() {
-    final line = _headerTotal() + 40;
-    String current = '';
-    for (final title in _navTitles) {
-      final ctx = _sectionKeys[title]?.currentContext;
-      if (ctx == null) continue;
-      final box = ctx.findRenderObject() as RenderBox?;
-      if (box == null || !box.attached) continue;
-      if (box.localToGlobal(Offset.zero).dy <= line) current = title;
-    }
-    if (current != _activeSection) setState(() => _activeSection = current);
   }
 
   void _openList(String type) {
@@ -768,16 +721,11 @@ class _HomePageState extends State<HomePage> {
 
                           const SizedBox(width: 16),
 
-                          // LINK KE SECTION
+                          // TOMBOL SEARCH
                           Expanded(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  for (final title in _navTitles)
-                                    _buildNavItem(title),
-                                ],
-                              ),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: _buildSearchButton(wide),
                             ),
                           ),
 
@@ -797,34 +745,42 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildNavItem(String title) {
-    final active = _activeSection == title;
-
-    return InkWell(
-      onTap: () => _scrollToSection(title),
-      hoverColor: const Color(0x144A6FC3),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOut,
-        height: _headerHeight,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: active ? lightBlue : Colors.transparent,
-              width: 2,
+  Widget _buildSearchButton(bool wide) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 440),
+      child: SizedBox(
+        width: double.infinity,
+        child: Material(
+          color: AppColors.card,
+          shape: const StadiumBorder(
+            side: BorderSide(color: AppColors.border),
+          ),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            hoverColor: const Color(0x144A6FC3),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SearchPage(repository: _repository),
+                ),
+              );
+            },
+            child: Container(
+              height: 40,
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Text(
+                wide ? 'Cari film, series, anime...' : 'Cari judul...',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.mutedText,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ),
-        ),
-        child: AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 220),
-          style: TextStyle(
-            color: active ? Colors.white : AppColors.softText,
-            fontSize: 14,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-          ),
-          child: Text(title),
         ),
       ),
     );

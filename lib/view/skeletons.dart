@@ -184,7 +184,6 @@ class HeroSkeleton extends StatelessWidget {
   }
 }
 
-/// Lingkaran shimmer untuk foto profil di header saat foto belum dimuat.
 class ProfileAvatarSkeleton extends StatelessWidget {
   final double radius;
 
@@ -199,6 +198,49 @@ class ProfileAvatarSkeleton extends StatelessWidget {
         decoration: const BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+class SearchResultSkeleton extends StatelessWidget {
+  final int count;
+
+  const SearchResultSkeleton({super.key, this.count = 6});
+
+  @override
+  Widget build(BuildContext context) {
+    return _shimmer(
+      SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(
+          children: [
+            for (int i = 0; i < count; i++)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    _block(width: 56, height: 84, radius: 6),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _block(width: 180, height: 16),
+                          const SizedBox(height: 8),
+                          _block(width: 70, height: 18, radius: 9),
+                          const SizedBox(height: 10),
+                          _block(height: 11),
+                          const SizedBox(height: 6),
+                          _block(width: 140, height: 11),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );
